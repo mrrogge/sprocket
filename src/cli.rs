@@ -110,6 +110,9 @@ impl Cli {
                 Err(_) => return Err(CliError::CliMiscError),
             };
             buf = buf.trim().to_string();
+            if buf == "exit" {
+                break;
+            }
             match parser.parse(&buf) {
                 Ok(ast) => {
                     for ast_node in ast {
@@ -122,9 +125,9 @@ impl Cli {
                     println!("{:?}", err);
                 }
             }
-
             buf.clear();
         }
+        Ok(())
     }
 }
 

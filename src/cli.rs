@@ -118,7 +118,9 @@ impl Cli {
                     parser.reset();
                 }
                 // TODO: we could make this REPL allow continuing user input across newlines, but this will require some work at the parser.
-                Err(err) => return Err(CliError::CliParserError(err)),
+                Err(err) => {
+                    println!("{:?}", err);
+                }
             }
 
             buf.clear();

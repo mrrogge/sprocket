@@ -1,3 +1,4 @@
+use core::fmt;
 use std::collections::HashMap;
 
 pub type AST = Vec<AstPrgPart>;
@@ -128,4 +129,16 @@ pub enum SpkType {
     Ref(Box<SpkType>),
     Unresolved(String),
     Void,
+}
+
+impl fmt::Display for SpkType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            SpkType::Bool => write!(f, "Bool"),
+            SpkType::Int32 => write!(f, "i32"),
+            SpkType::Ref(type_) => write!(f, "&{}", type_),
+            SpkType::Unresolved(id) => write!(f, "unresolved({})", id),
+            SpkType::Void => write!(f, "void"),
+        }
+    }
 }

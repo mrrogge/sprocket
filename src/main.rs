@@ -9,6 +9,7 @@ mod semantics;
 mod symbol;
 mod token;
 mod callstack;
+mod sprocket;
 
 fn main() -> CliResult<()> {
     cli::Cli::run()

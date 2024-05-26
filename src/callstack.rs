@@ -209,14 +209,14 @@ impl CallStack {
             AstExpr::BinopExpr { left, op, right } => {
                 let left_type = match SemanticAnalyzer::eval_expr_type(
                     &left,
-                    &self.current_ar().unwrap().symbols,
+                    &self,
                 ) {
                     Ok(left_type) => left_type,
                     Err(_) => return Err(SprocketError::RuntimeTypeError),
                 };
                 let right_type = match SemanticAnalyzer::eval_expr_type(
                     &right,
-                    &self.current_ar().unwrap().symbols,
+                    &self,
                 ) {
                     Ok(right_type) => right_type,
                     Err(_) => return Err(SprocketError::RuntimeTypeError),
@@ -426,6 +426,33 @@ impl CallStack {
                 Ok(())
             }
         }
+    }
+
+    pub fn load_globals(&mut self) -> SprocketResult<()> {
+        self.insert_symbol("bool", SymbolKind::Type(SpkType::Bool))?;
+        self.insert_symbol("i32", SymbolKind::Type(SpkType::Int32))?;
+        Ok(())
+    }
+
+    pub fn load_default_vals(&mut self) -> &Self {
+        for ar in &mut self.ars {
+            for symbol_entry in &mut ar.symbols {
+                match symbol_entry {
+                    (symbol, SymbolKind::Var(SpkType::Bool)) => {
+                        if let None = ar.mem.get(symbol) {
+                            ar.mem.insert(symbol.clone(), MemTableVal::Bool(false));
+                        }
+                    }
+                    (symbol, SymbolKind::Var(SpkType::Int32)) => {
+                        if let None = ar.mem.get(symbol) {
+                            ar.mem.insert(symbol.clone(), MemTableVal::Int32(0));
+                        }
+                    }
+                    (_, _) => {}
+                }
+            }
+        }
+        self
     }
 }
 

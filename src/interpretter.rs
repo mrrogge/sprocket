@@ -1,24 +1,16 @@
 use std::io;
 use std::io::Write;
-
 use std::sync::mpsc;
 use std::sync::mpsc::RecvTimeoutError;
 use std::thread;
 use std::time::Duration;
 
 use crate::ast::AstPrgPart;
-
 use crate::ast::AstTagDecl;
-
-use crate::ast::SpkType;
-
-use crate::callstack::ActivationRecord;
 use crate::callstack::CallStack;
-use crate::callstack::MemTable;
 use crate::callstack::MemTableVal;
 use crate::parser::SprocketParser;
 use crate::semantics::SemanticAnalyzer;
-
 use crate::sprocket::SprocketError;
 use crate::sprocket::SprocketResult;
 use crate::symbol::SymbolKind;
@@ -34,50 +26,26 @@ impl SprocketInterpretter {
         let ast = parser.parse(source)?;
 
         let mut sem_analyzer = SemanticAnalyzer::new();
-        let symbol_table = sem_analyzer.analyze(ast)?;
+        let mut callstack = CallStack::new();
+        callstack.push(None);
+        callstack.load_globals()?;
+        callstack.insert_symbol("__main__", SymbolKind::Task(ast.clone()))?;
+        sem_analyzer.analyze(&ast, &mut callstack)?;
+        callstack.load_default_vals();
 
-        let mut mem_table = MemTable::new();
-        for symbol_table_entry in &symbol_table {
-            match symbol_table_entry {
-                (symbol, SymbolKind::Var(SpkType::Bool)) => {
-                    mem_table.insert(symbol.clone(), MemTableVal::Bool(false));
-                }
-                (symbol, SymbolKind::Var(SpkType::Int32)) => {
-                    mem_table.insert(symbol.clone(), MemTableVal::Int32(0));
-                }
-                (_, SymbolKind::Var(SpkType::Ref(_))) => {}
-                (_, SymbolKind::Var(_)) => {
-                    todo!()
-                }
-                (_, SymbolKind::Type(SpkType::Bool | SpkType::Int32)) => {}
-                (_, SymbolKind::Type(_)) => {
-                    todo!()
-                }
-                (_, SymbolKind::FunctionDef(_)) => {}
-                (_, SymbolKind::Task(_)) => {}
-            }
-        }
-
-        let mut call_stack = CallStack::new();
-
-        call_stack.push(Some(ActivationRecord {
-            symbols: symbol_table,
-            mem: mem_table,
-        }));
-
-        let main_task = match call_stack.lookup_task("__main__")? {
+        let main_task = match callstack.lookup_task("__main__")? {
             Some(task) => task.clone(),
             None => return Err(SprocketError::RuntimeTypeError),
         };
         for part in main_task {
             if let AstPrgPart::TagDecl(AstTagDecl { .. }) = part {
-                call_stack.exe_prg_part(&part)?;
+                callstack.exe_prg_part(&part)?;
             }
         }
-        println!("{:?}", &call_stack);
+        println!("{:?}", &callstack);
         Ok(Self {
             is_running: false,
-            call_stack,
+            call_stack: callstack,
         })
     }
 
@@ -213,7 +181,10 @@ impl SprocketInterpretter {
             None => return Err(SprocketError::RuntimeTypeError),
         };
         for part in main_task {
-            self.call_stack.exe_prg_part(&part)?;
+            match part {
+                AstPrgPart::Statement(_) => self.call_stack.exe_prg_part(&part)?,
+                _ => {}
+            }
         }
         Ok(())
     }

@@ -1,5 +1,3 @@
-use std::fmt;
-
 use std::io;
 use std::io::Write;
 
@@ -7,8 +5,6 @@ use std::sync::mpsc;
 use std::sync::mpsc::RecvTimeoutError;
 use std::thread;
 use std::time::Duration;
-
-
 
 use crate::ast::AstPrgPart;
 
@@ -20,14 +16,12 @@ use crate::callstack::ActivationRecord;
 use crate::callstack::CallStack;
 use crate::callstack::MemTable;
 use crate::callstack::MemTableVal;
-use crate::parser;
 use crate::parser::SprocketParser;
 use crate::semantics::SemanticAnalyzer;
 
 use crate::sprocket::SprocketError;
 use crate::sprocket::SprocketResult;
 use crate::symbol::SymbolKind;
-
 
 pub struct SprocketInterpretter {
     pub is_running: bool,
@@ -136,16 +130,17 @@ impl SprocketInterpretter {
                     cli_tx.send(InterpCliMsg::Get(args[1].to_string())).unwrap();
                 } else if args[0] == "set" {
                     if args.len() == 1 {
-                        continue
+                        continue;
                     }
                     cli_tx.send(InterpCliMsg::Set(args[1].to_string())).unwrap();
                 } else if args[0] == "clear" {
                     if args.len() == 1 {
-                        continue
+                        continue;
                     }
-                    cli_tx.send(InterpCliMsg::Clear(args[1].to_string())).unwrap();
-                }
-                else {
+                    cli_tx
+                        .send(InterpCliMsg::Clear(args[1].to_string()))
+                        .unwrap();
+                } else {
                     println!("unknown cmd");
                 }
             }
@@ -199,10 +194,12 @@ impl SprocketInterpretter {
                     break;
                 }
                 Ok(InterpCliMsg::Set(id)) => {
-                    self.call_stack.set_symbol_val(&id, MemTableVal::Bool(true))?;
+                    self.call_stack
+                        .set_symbol_val(&id, MemTableVal::Bool(true))?;
                 }
                 Ok(InterpCliMsg::Clear(id)) => {
-                    self.call_stack.set_symbol_val(&id, MemTableVal::Bool(false))?;
+                    self.call_stack
+                        .set_symbol_val(&id, MemTableVal::Bool(false))?;
                 }
             }
         }

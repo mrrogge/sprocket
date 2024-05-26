@@ -1,9 +1,8 @@
 use std::collections::HashMap;
-use std::fmt;
 
 use crate::ast::{
-    AstBinop, AstExpr, AstFnDecl, AstParamDecl, AstParamKind, AstPrgPart,
-    AstStatement, AstTagDecl, AstUnop, SpkType, TableCell, AST,
+    AstBinop, AstExpr, AstFnDecl, AstParamDecl, AstParamKind, AstPrgPart, AstStatement, AstTagDecl,
+    AstUnop, SpkType, TableCell, AST,
 };
 use crate::lexer::Lexer;
 use crate::sprocket::{SprocketError, SprocketResult};
@@ -90,7 +89,9 @@ impl SprocketParser {
                 self.advance();
                 Ok(())
             }
-            (Some(token0), token1) => Err(SprocketError::UnexpectedToken(token0.clone(), Some(token1))),
+            (Some(token0), token1) => {
+                Err(SprocketError::UnexpectedToken(token0.clone(), Some(token1)))
+            }
             (None, _) => Err(SprocketError::UnexpectedEOF),
         }
     }

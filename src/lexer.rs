@@ -1,6 +1,5 @@
 use crate::token;
 use crate::token::Token;
-use std::fmt;
 
 pub struct Lexer {
     idx: usize,

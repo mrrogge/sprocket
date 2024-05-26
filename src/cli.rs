@@ -1,10 +1,9 @@
 use clap::Parser;
 use serde::Deserialize;
-use std::error::Error;
 use std::fs::File;
+use std::io;
 use std::io::Write;
 use std::path::PathBuf;
-use std::{fmt, io};
 
 use crate::interpretter::SprocketInterpretter;
 use crate::parser::SprocketParser;
@@ -87,7 +86,9 @@ impl Cli {
             None => return Err(SprocketError::MiscError),
         };
         for ast in main_task {
-            dest_buf.write_all(format!("{:?}", &ast).as_bytes()).unwrap();
+            dest_buf
+                .write_all(format!("{:?}", &ast).as_bytes())
+                .unwrap();
             dest_buf.write_all("\n".as_bytes()).unwrap();
         }
         interp.run().unwrap();

@@ -1,7 +1,9 @@
 use std::collections::HashMap;
 
 use crate::{
-    ast::{AstBinop, AstExpr, AstPrgPart, AstStatement, AstUnop, SpkType, TableCell, AST}, sprocket::{SprocketError, SprocketResult}, symbol::{SymbolKind, SymbolTable}
+    ast::{AstBinop, AstExpr, AstPrgPart, AstStatement, AstUnop, SpkType, TableCell, AST},
+    sprocket::{SprocketError, SprocketResult},
+    symbol::{SymbolKind, SymbolTable},
 };
 
 pub struct SemanticAnalyzer {}

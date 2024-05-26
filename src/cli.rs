@@ -8,6 +8,7 @@ use std::{fmt, io};
 
 use crate::interpretter::SprocketInterpretter;
 use crate::parser::SprocketParser;
+use crate::sprocket::{SprocketError, SprocketResult};
 
 #[derive(Deserialize)]
 #[serde(default)]
@@ -56,7 +57,7 @@ impl Cli {
         config
     }
 
-    pub fn run() -> CliResult<()> {
+    pub fn run() -> SprocketResult<()> {
         let cli = Cli::parse();
         let _config = cli.config();
         if let Some(_) = &cli.input_path {
@@ -65,10 +66,10 @@ impl Cli {
         cli.run_repl()
     }
 
-    pub fn run_parse_input(&self) -> CliResult<()> {
+    pub fn run_parse_input(&self) -> SprocketResult<()> {
         let input_path = match &self.input_path {
             Some(input_path) => input_path,
-            None => return Err(CliError::CliMiscError),
+            None => return Err(SprocketError::MiscError),
         };
         let default_dest = PathBuf::from("./sprocket.dump");
         let dest = match &self.output_path {
@@ -76,18 +77,14 @@ impl Cli {
             None => &default_dest,
         };
         let source = std::fs::read_to_string(input_path.to_str().unwrap()).unwrap();
-        let interp = match SprocketInterpretter::new(&source) {
-            Ok(interp) => interp,
-            Err(err) => return Err(CliError::CliInterpError(err)),
-        };
+        let interp = SprocketInterpretter::new(&source)?;
         let mut dest_buf = match File::create(dest) {
             Ok(dest_buf) => dest_buf,
-            Err(_) => return Err(CliError::CliMiscError),
+            Err(_) => return Err(SprocketError::MiscError),
         };
-        let main_task = match interp.call_stack.lookup_task("__main__") {
-            Ok(Some(task)) => task,
-            Ok(None) => return Err(CliError::CliMiscError),
-            Err(err) => return Err(CliError::CliInterpError(err))
+        let main_task = match interp.call_stack.lookup_task("__main__")? {
+            Some(task) => task,
+            None => return Err(SprocketError::MiscError),
         };
         for ast in main_task {
             dest_buf.write_all(format!("{:?}", &ast).as_bytes()).unwrap();
@@ -97,7 +94,7 @@ impl Cli {
         Ok(())
     }
 
-    pub fn run_repl(&self) -> CliResult<()> {
+    pub fn run_repl(&self) -> SprocketResult<()> {
         let mut parser = SprocketParser::new();
         loop {
             let mut stdout = io::stdout();
@@ -107,7 +104,7 @@ impl Cli {
             let mut buf = String::new();
             match io::stdin().read_line(&mut buf) {
                 Ok(_) => {}
-                Err(_) => return Err(CliError::CliMiscError),
+                Err(_) => return Err(SprocketError::MiscError),
             };
             buf = buf.trim().to_string();
             if buf == "exit" {
@@ -130,24 +127,3 @@ impl Cli {
         Ok(())
     }
 }
-
-#[derive(Debug, Clone)]
-pub enum CliError {
-    CliParserError(crate::parser::ParserError),
-    CliInterpError(crate::interpretter::InterpError),
-    CliMiscError,
-}
-
-impl Error for CliError {}
-
-impl fmt::Display for CliError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Self::CliParserError(err) => write!(f, "{}", err),
-            Self::CliInterpError(err) => write!(f, "{}", err),
-            Self::CliMiscError => write!(f, "misc error"),
-        }
-    }
-}
-
-pub type CliResult<T> = Result<T, CliError>;

@@ -23,8 +23,9 @@ use crate::callstack::MemTableVal;
 use crate::parser;
 use crate::parser::SprocketParser;
 use crate::semantics::SemanticAnalyzer;
-use crate::semantics::SemanticError;
 
+use crate::sprocket::SprocketError;
+use crate::sprocket::SprocketResult;
 use crate::symbol::SymbolKind;
 
 
@@ -34,18 +35,12 @@ pub struct SprocketInterpretter {
 }
 
 impl SprocketInterpretter {
-    pub fn new(source: &str) -> InterpResult<Self> {
+    pub fn new(source: &str) -> SprocketResult<Self> {
         let mut parser = SprocketParser::new();
-        let ast = match parser.parse(source) {
-            Ok(ast) => ast,
-            Err(err) => return Err(InterpError::ParserError(err)),
-        };
+        let ast = parser.parse(source)?;
 
         let mut sem_analyzer = SemanticAnalyzer::new();
-        let symbol_table = match sem_analyzer.analyze(ast) {
-            Ok(symbol_table) => symbol_table,
-            Err(err) => return Err(InterpError::SemanticError(err)),
-        };
+        let symbol_table = sem_analyzer.analyze(ast)?;
 
         let mut mem_table = MemTable::new();
         for symbol_table_entry in &symbol_table {
@@ -78,7 +73,7 @@ impl SprocketInterpretter {
 
         let main_task = match call_stack.lookup_task("__main__")? {
             Some(task) => task.clone(),
-            None => return Err(InterpError::RuntimeTypeError),
+            None => return Err(SprocketError::RuntimeTypeError),
         };
         for part in main_task {
             if let AstPrgPart::TagDecl(AstTagDecl { .. }) = part {
@@ -92,7 +87,7 @@ impl SprocketInterpretter {
         })
     }
 
-    pub fn run(mut self) -> InterpResult<()> {
+    pub fn run(mut self) -> SprocketResult<()> {
         let (cli_tx, cli_rx) = mpsc::channel::<InterpCliMsg>();
         let (_prg_tx, _prg_rx) = mpsc::channel::<InterpPrgMsg>();
         let cli_thread_handle = thread::spawn(move || {
@@ -189,7 +184,7 @@ impl SprocketInterpretter {
                                 Some(MemTableVal::Bool(val)) => val.to_string(),
                                 Some(MemTableVal::Int32(val)) => val.to_string(),
                                 Some(MemTableVal::_RefTo(id)) => format!("RefTo({})", id),
-                                None => return Err(InterpError::SymbolMissingVal(id.clone())),
+                                None => return Err(SprocketError::SymbolMissingVal(id.clone())),
                             }
                         }
                         Some(SymbolKind::FunctionDef(_)) => "{function}".to_string(),
@@ -215,10 +210,10 @@ impl SprocketInterpretter {
         Ok(())
     }
 
-    fn update(&mut self) -> InterpResult<()> {
+    fn update(&mut self) -> SprocketResult<()> {
         let main_task = match self.call_stack.lookup_task("__main__")? {
             Some(task) => task.clone(),
-            None => return Err(InterpError::RuntimeTypeError),
+            None => return Err(SprocketError::RuntimeTypeError),
         };
         for part in main_task {
             self.call_stack.exe_prg_part(&part)?;
@@ -226,75 +221,6 @@ impl SprocketInterpretter {
         Ok(())
     }
 }
-
-#[derive(Debug, Clone)]
-pub enum InterpError {
-    ParserError(parser::ParserError),
-    SemanticError(SemanticError),
-    _NotLoaded,
-    _DupDecl(String),
-    _InvalidAssign,
-    _UndefTag(String),
-    SymbolNotDefined(String),
-    SymbolNotAVar(String, SymbolKind),
-    SymbolMissingVal(String),
-    EmptyCallStack,
-    UndefFunction(String),
-    RuntimeTypeError,
-    _Unknown,
-}
-
-impl fmt::Display for InterpError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match &self {
-            Self::ParserError(err) => {
-                write!(f, "{}", err)
-            }
-            Self::SemanticError(err) => {
-                write!(f, "{:?}", err)
-            }
-            Self::_NotLoaded => {
-                write!(f, "must load a program first before running")
-            }
-            Self::_DupDecl(id) => {
-                write!(f, "Duplicate declared tag: \"{:?}\"", id)
-            }
-            Self::_InvalidAssign => {
-                write!(f, "Invalid assign statement")
-            }
-            Self::_UndefTag(id) => {
-                write!(f, "Undefined tag reference: \"{}\"", id)
-            }
-            Self::SymbolNotDefined(symbol) => {
-                write!(f, "Symbol {} not defined", symbol)
-            }
-            Self::SymbolNotAVar(symbol, kind) => {
-                write!(
-                    f,
-                    "Expected symbol {} to be a var, but is {:?}",
-                    symbol, kind
-                )
-            }
-            Self::SymbolMissingVal(_symbol) => {
-                write!(f, "Symbol has not been assigned a value")
-            }
-            Self::EmptyCallStack => {
-                write!(f, "Call stack is empty")
-            }
-            Self::UndefFunction(id) => {
-                write!(f, "Function {} is undefined", id)
-            }
-            Self::RuntimeTypeError => {
-                write!(f, "Runtime type error")
-            }
-            Self::_Unknown => {
-                write!(f, "unknown")
-            }
-        }
-    }
-}
-
-pub type InterpResult<T> = Result<T, InterpError>;
 
 pub enum InterpCliMsg {
     Exit,

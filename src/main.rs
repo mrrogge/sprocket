@@ -1,4 +1,4 @@
-use cli::CliResult;
+use sprocket::SprocketResult;
 
 mod ast;
 mod cli;
@@ -11,6 +11,6 @@ mod token;
 mod callstack;
 mod sprocket;
 
-fn main() -> CliResult<()> {
+fn main() -> SprocketResult<()> {
     cli::Cli::run()
 }

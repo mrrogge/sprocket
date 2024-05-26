@@ -6,6 +6,7 @@ use crate::ast::{
     AstStatement, AstTagDecl, AstUnop, SpkType, TableCell, AST,
 };
 use crate::lexer::Lexer;
+use crate::sprocket::{SprocketError, SprocketResult};
 use crate::token::Token;
 use crate::token::TokenKeyword;
 
@@ -24,7 +25,7 @@ impl SprocketParser {
         }
     }
 
-    pub fn parse(&mut self, source: &str) -> ParserResult<AST> {
+    pub fn parse(&mut self, source: &str) -> SprocketResult<AST> {
         let mut ast: AST = vec![];
         self.lexer.init(source);
         self.next_token = None;
@@ -71,7 +72,7 @@ impl SprocketParser {
         self.next_token = self.lexer.next();
     }
 
-    fn eat(&mut self, token: Token) -> ParserResult<()> {
+    fn eat(&mut self, token: Token) -> SprocketResult<()> {
         match (&self.next_token, token) {
             (Some(Token::Comment(_)), Token::Comment(_))
             | (Some(Token::Id(_)), Token::Id(_))
@@ -89,25 +90,25 @@ impl SprocketParser {
                 self.advance();
                 Ok(())
             }
-            (Some(token0), token1) => Err(ParserError::InvalidToken(token0.clone(), token1)),
-            (None, _) => Err(ParserError::UnexpectedEOF),
+            (Some(token0), token1) => Err(SprocketError::UnexpectedToken(token0.clone(), Some(token1))),
+            (None, _) => Err(SprocketError::UnexpectedEOF),
         }
     }
 
-    fn _eat_id(&mut self) -> ParserResult<String> {
+    fn _eat_id(&mut self) -> SprocketResult<String> {
         match &self.next_token {
             Some(Token::Id(id)) => {
                 let the_id = id.clone();
                 self.advance();
                 Ok(the_id)
             }
-            Some(token) => Err(ParserError::UnexpectedToken(token.clone())),
-            None => Err(ParserError::UnexpectedEOF),
+            Some(token) => Err(SprocketError::UnexpectedToken(token.clone(), None)),
+            None => Err(SprocketError::UnexpectedEOF),
         }
     }
 
     // (GLOBAL)? TAG id:id (:= expr)?;
-    fn process_tag_decl(&mut self) -> ParserResult<AstTagDecl> {
+    fn process_tag_decl(&mut self) -> SprocketResult<AstTagDecl> {
         let mut is_global = false;
         if let Ok(_) = self.eat(Token::Keyword(TokenKeyword::Global)) {
             is_global = true;
@@ -116,12 +117,12 @@ impl SprocketParser {
         let id = match &self.next_token {
             Some(Token::Id(id)) => id.to_string(),
             Some(token) => {
-                return Err(ParserError::InvalidToken(
+                return Err(SprocketError::UnexpectedToken(
                     token.clone(),
-                    Token::Id(String::new()),
+                    Some(Token::Id(String::new())),
                 ))
             }
-            None => return Err(ParserError::UnexpectedEOF),
+            None => return Err(SprocketError::UnexpectedEOF),
         };
         self.advance();
         self.eat(Token::Colon)?;
@@ -143,17 +144,17 @@ impl SprocketParser {
         })
     }
 
-    fn process_fn_decl(&mut self) -> ParserResult<AstFnDecl> {
+    fn process_fn_decl(&mut self) -> SprocketResult<AstFnDecl> {
         self.eat(Token::Keyword(TokenKeyword::Function))?;
         let id = match &self.next_token {
             Some(Token::Id(id)) => id.to_string(),
             Some(token) => {
-                return Err(ParserError::InvalidToken(
+                return Err(SprocketError::UnexpectedToken(
                     token.clone(),
-                    Token::Id(String::new()),
+                    Some(Token::Id(String::new())),
                 ))
             }
-            None => return Err(ParserError::UnexpectedEOF),
+            None => return Err(SprocketError::UnexpectedEOF),
         };
         self.advance();
         self.eat(Token::LParen)?;
@@ -170,8 +171,8 @@ impl SprocketParser {
                 self.process_type()?
             }
             Some(Token::LCurly) => SpkType::Void,
-            Some(token) => return Err(ParserError::UnexpectedToken(token.clone())),
-            None => return Err(ParserError::UnexpectedEOF),
+            Some(token) => return Err(SprocketError::UnexpectedToken(token.clone(), None)),
+            None => return Err(SprocketError::UnexpectedEOF),
         };
         self.eat(Token::LCurly)?;
         let body = self.process_fn_body()?;
@@ -185,7 +186,7 @@ impl SprocketParser {
         })
     }
 
-    fn process_fn_param_decls(&mut self) -> ParserResult<Vec<AstParamDecl>> {
+    fn process_fn_param_decls(&mut self) -> SprocketResult<Vec<AstParamDecl>> {
         let mut params: Vec<AstParamDecl> = vec![];
         match &self.next_token {
             Some(Token::RParen) => return Ok(params),
@@ -208,7 +209,7 @@ impl SprocketParser {
         Ok(params)
     }
 
-    fn process_fn_param_decl(&mut self) -> ParserResult<AstParamDecl> {
+    fn process_fn_param_decl(&mut self) -> SprocketResult<AstParamDecl> {
         let kind = self.process_param_kind()?;
 
         let id = match &self.next_token {
@@ -217,8 +218,8 @@ impl SprocketParser {
                 self.advance();
                 result
             }
-            Some(token) => return Err(ParserError::UnexpectedToken(token.clone())),
-            None => return Err(ParserError::UnexpectedEOF),
+            Some(token) => return Err(SprocketError::UnexpectedToken(token.clone(), None)),
+            None => return Err(SprocketError::UnexpectedEOF),
         };
         self.eat(Token::Colon)?;
         let type_ = self.process_type()?;
@@ -233,7 +234,7 @@ impl SprocketParser {
         }
     }
 
-    fn process_param_kind(&mut self) -> ParserResult<AstParamKind> {
+    fn process_param_kind(&mut self) -> SprocketResult<AstParamKind> {
         match &self.next_token {
             Some(Token::GreaterThan) => {
                 self.eat(Token::GreaterThan)?;
@@ -249,12 +250,12 @@ impl SprocketParser {
                     _ => Ok(AstParamKind::In),
                 }
             }
-            Some(token) => return Err(ParserError::UnexpectedToken(token.clone())),
-            None => return Err(ParserError::UnexpectedEOF),
+            Some(token) => return Err(SprocketError::UnexpectedToken(token.clone(), None)),
+            None => return Err(SprocketError::UnexpectedEOF),
         }
     }
 
-    fn process_fn_body(&mut self) -> ParserResult<Vec<AstPrgPart>> {
+    fn process_fn_body(&mut self) -> SprocketResult<Vec<AstPrgPart>> {
         let mut parts: Vec<AstPrgPart> = vec![];
         loop {
             match &self.next_token {
@@ -271,7 +272,7 @@ impl SprocketParser {
         Ok(parts)
     }
 
-    fn process_fn_body_part(&mut self) -> ParserResult<AstPrgPart> {
+    fn process_fn_body_part(&mut self) -> SprocketResult<AstPrgPart> {
         match &self.next_token {
             Some(Token::Comment(_)) => Ok(AstPrgPart::Comment(self.process_comment()?)),
             Some(Token::Keyword(TokenKeyword::Tag)) => {
@@ -282,23 +283,23 @@ impl SprocketParser {
     }
 
     // comment
-    fn process_comment(&mut self) -> ParserResult<String> {
+    fn process_comment(&mut self) -> SprocketResult<String> {
         let comment = match &self.next_token {
             Some(Token::Comment(comment)) => comment.to_string(),
             Some(token) => {
-                return Err(ParserError::InvalidToken(
+                return Err(SprocketError::UnexpectedToken(
                     token.clone(),
-                    Token::Comment(String::new()),
+                    Some(Token::Comment(String::new())),
                 ))
             }
-            None => return Err(ParserError::UnexpectedEOF),
+            None => return Err(SprocketError::UnexpectedEOF),
         };
         self.advance();
         return Ok(comment);
     }
 
     // (table_statement_row)*\n
-    fn process_table_statement(&mut self) -> ParserResult<AstStatement> {
+    fn process_table_statement(&mut self) -> SprocketResult<AstStatement> {
         let mut rows: Vec<Vec<TableCell>> = vec![];
         loop {
             match &self.next_token {
@@ -308,7 +309,7 @@ impl SprocketParser {
                 Some(Token::Newline) => {
                     break;
                 }
-                Some(token) => return Err(ParserError::UnexpectedToken(token.clone())),
+                Some(token) => return Err(SprocketError::UnexpectedToken(token.clone(), None)),
                 None => {
                     break;
                 }
@@ -317,7 +318,7 @@ impl SprocketParser {
         Ok(AstStatement::TableStatement(rows))
     }
 
-    fn process_table_statement_row(&mut self) -> ParserResult<Vec<TableCell>> {
+    fn process_table_statement_row(&mut self) -> SprocketResult<Vec<TableCell>> {
         self.eat(Token::Pipe)?;
         let mut row: Vec<TableCell> = vec![];
         loop {
@@ -336,7 +337,7 @@ impl SprocketParser {
                 Some(_) => {
                     row.push(TableCell::Expr(self.process_expr()?));
                 }
-                None => return Err(ParserError::UnexpectedEOF),
+                None => return Err(SprocketError::UnexpectedEOF),
             }
             match &self.next_token {
                 Some(Token::Pipe) => {
@@ -346,13 +347,13 @@ impl SprocketParser {
                     self.eat(Token::Newline)?;
                     return Ok(row);
                 }
-                Some(token) => return Err(ParserError::UnexpectedToken(token.clone())),
-                None => return Err(ParserError::UnexpectedEOF),
+                Some(token) => return Err(SprocketError::UnexpectedToken(token.clone(), None)),
+                None => return Err(SprocketError::UnexpectedEOF),
             }
         }
     }
 
-    fn process_statement(&mut self) -> ParserResult<AstStatement> {
+    fn process_statement(&mut self) -> SprocketResult<AstStatement> {
         match &self.next_token {
             Some(Token::Pipe) => self.process_table_statement(),
             Some(Token::Keyword(TokenKeyword::Return)) => {
@@ -377,15 +378,15 @@ impl SprocketParser {
                         self.eat(Token::Semicolon)?;
                         Ok(AstStatement::ExprStatement(binop_expr))
                     }
-                    None => Err(ParserError::UnexpectedEOF),
+                    None => Err(SprocketError::UnexpectedEOF),
                 }
             }
             Some(_) => self.process_expr_stmt(),
-            None => Err(ParserError::UnexpectedEOF),
+            None => Err(SprocketError::UnexpectedEOF),
         }
     }
 
-    fn process_return_stmt(&mut self) -> ParserResult<Option<AstExpr>> {
+    fn process_return_stmt(&mut self) -> SprocketResult<Option<AstExpr>> {
         self.eat(Token::Keyword(TokenKeyword::Return))?;
         match &self.next_token {
             Some(Token::Semicolon) => {
@@ -400,13 +401,13 @@ impl SprocketParser {
         }
     }
 
-    fn process_expr_stmt(&mut self) -> ParserResult<AstStatement> {
+    fn process_expr_stmt(&mut self) -> SprocketResult<AstStatement> {
         let expr = self.process_expr()?;
         self.eat(Token::Semicolon)?;
         Ok(AstStatement::ExprStatement(expr))
     }
 
-    fn process_expr(&mut self) -> ParserResult<AstExpr> {
+    fn process_expr(&mut self) -> SprocketResult<AstExpr> {
         match &self.next_token {
             Some(Token::Not | Token::Keyword(TokenKeyword::Not)) => {
                 let op = AstUnop::Not;
@@ -436,8 +437,8 @@ impl SprocketParser {
                         let expr = self.process_expr()?;
                         Ok(AstExpr::UnopExpr(AstUnop::Ref, Box::new(expr)))
                     }
-                    Some(token) => Err(ParserError::UnexpectedToken(token.clone())),
-                    None => Err(ParserError::UnexpectedEOF),
+                    Some(token) => Err(SprocketError::UnexpectedToken(token.clone(), None)),
+                    None => Err(SprocketError::UnexpectedEOF),
                 }
             }
             Some(Token::Asterisk) => {
@@ -447,8 +448,8 @@ impl SprocketParser {
                         let expr = self.process_expr()?;
                         Ok(AstExpr::UnopExpr(AstUnop::Deref, Box::new(expr)))
                     }
-                    Some(token) => Err(ParserError::UnexpectedToken(token.clone())),
-                    None => Err(ParserError::UnexpectedEOF),
+                    Some(token) => Err(SprocketError::UnexpectedToken(token.clone(), None)),
+                    None => Err(SprocketError::UnexpectedEOF),
                 }
             }
             Some(Token::LParen) => Ok(self.process_paren_expr()?),
@@ -468,7 +469,7 @@ impl SprocketParser {
                     Token::Keyword(TokenKeyword::True) => AstExpr::BoolLiteralExpr(true),
                     Token::Keyword(TokenKeyword::False) => AstExpr::BoolLiteralExpr(false),
                     Token::IntegerLiteral(val) => AstExpr::IntLiteralExpr(*val),
-                    _ => return Err(ParserError::UnexpectedToken(token.clone())),
+                    _ => return Err(SprocketError::UnexpectedToken(token.clone(), None)),
                 };
                 self.advance();
                 match &self.next_token {
@@ -476,11 +477,11 @@ impl SprocketParser {
                     Some(_) | None => Ok(left),
                 }
             }
-            None => Err(ParserError::UnexpectedEOF),
+            None => Err(SprocketError::UnexpectedEOF),
         }
     }
 
-    fn process_binop(&mut self, left: AstExpr) -> ParserResult<AstExpr> {
+    fn process_binop(&mut self, left: AstExpr) -> SprocketResult<AstExpr> {
         let binop1 = match &self.next_token {
             Some(Token::And | Token::Keyword(TokenKeyword::And)) => {
                 self.advance();
@@ -543,8 +544,8 @@ impl SprocketParser {
                 self.eat(Token::Plus)?;
                 AstBinop::Plus
             }
-            Some(token) => return Err(ParserError::UnexpectedToken(token.clone())),
-            None => return Err(ParserError::UnexpectedEOF),
+            Some(token) => return Err(SprocketError::UnexpectedToken(token.clone(), None)),
+            None => return Err(SprocketError::UnexpectedEOF),
         };
 
         if let Some(Token::LParen) = &self.next_token {
@@ -593,7 +594,7 @@ impl SprocketParser {
         }
     }
 
-    fn process_call_expr(&mut self, id: String) -> ParserResult<AstExpr> {
+    fn process_call_expr(&mut self, id: String) -> SprocketResult<AstExpr> {
         self.eat(Token::LParen)?;
         let mut pos_args: Vec<AstExpr> = vec![];
         let mut named_args: HashMap<String, AstExpr> = HashMap::new();
@@ -611,7 +612,7 @@ impl SprocketParser {
                 let (arg_expr, name) = self.process_call_arg()?;
                 match name {
                     Some(name) => match named_args.insert(name, arg_expr) {
-                        Some(_) => return Err(ParserError::DupArgForNamedParam(id.clone())),
+                        Some(_) => return Err(SprocketError::DupArgForNamedParam(id.clone())),
                         None => {}
                     },
                     None => {
@@ -619,7 +620,7 @@ impl SprocketParser {
                     }
                 }
             }
-            None => return Err(ParserError::UnexpectedEOF),
+            None => return Err(SprocketError::UnexpectedEOF),
         }
         loop {
             match &self.next_token {
@@ -632,7 +633,7 @@ impl SprocketParser {
                     let (arg_expr, name) = self.process_call_arg()?;
                     match name {
                         Some(name) => match named_args.insert(name, arg_expr) {
-                            Some(_) => return Err(ParserError::DupArgForNamedParam(id.clone())),
+                            Some(_) => return Err(SprocketError::DupArgForNamedParam(id.clone())),
                             None => {}
                         },
                         None => {
@@ -640,8 +641,8 @@ impl SprocketParser {
                         }
                     }
                 }
-                Some(token) => return Err(ParserError::UnexpectedToken(token.clone())),
-                None => return Err(ParserError::UnexpectedEOF),
+                Some(token) => return Err(SprocketError::UnexpectedToken(token.clone(), None)),
+                None => return Err(SprocketError::UnexpectedEOF),
             }
         }
         Ok(AstExpr::CallExpr {
@@ -651,7 +652,7 @@ impl SprocketParser {
         })
     }
 
-    fn process_call_arg(&mut self) -> ParserResult<(AstExpr, Option<String>)> {
+    fn process_call_arg(&mut self) -> SprocketResult<(AstExpr, Option<String>)> {
         let expr = self.process_expr()?;
         if let AstExpr::IdExpr(id) = &expr {
             match &self.next_token {
@@ -661,14 +662,14 @@ impl SprocketParser {
                     return Ok((arg_expr, Some(id.clone())));
                 }
                 Some(Token::Comma | Token::RParen) => {}
-                Some(token) => return Err(ParserError::UnexpectedToken(token.clone())),
-                None => return Err(ParserError::UnexpectedEOF),
+                Some(token) => return Err(SprocketError::UnexpectedToken(token.clone(), None)),
+                None => return Err(SprocketError::UnexpectedEOF),
             }
         }
         Ok((expr, None))
     }
 
-    fn process_paren_expr(&mut self) -> ParserResult<AstExpr> {
+    fn process_paren_expr(&mut self) -> SprocketResult<AstExpr> {
         self.eat(Token::LParen)?;
         let expr = self.process_expr()?;
         self.eat(Token::RParen)?;
@@ -700,7 +701,7 @@ impl SprocketParser {
     }
 
     // ID := expr;
-    fn process_assign_statement(&mut self, target: String) -> ParserResult<AstStatement> {
+    fn process_assign_statement(&mut self, target: String) -> SprocketResult<AstStatement> {
         self.eat(Token::Assign)?;
         let expr = self.process_expr()?;
         self.eat(Token::Semicolon)?;
@@ -710,7 +711,7 @@ impl SprocketParser {
         })
     }
 
-    fn process_type(&mut self) -> ParserResult<SpkType> {
+    fn process_type(&mut self) -> SprocketResult<SpkType> {
         match &self.next_token {
             Some(Token::And) => {
                 self.eat(Token::And)?;
@@ -725,40 +726,11 @@ impl SprocketParser {
                     id => SpkType::Unresolved(id.to_string()),
                 })
             }
-            Some(token) => Err(ParserError::UnexpectedToken(token.clone())),
-            None => Err(ParserError::UnexpectedEOF),
+            Some(token) => Err(SprocketError::UnexpectedToken(token.clone(), None)),
+            None => Err(SprocketError::UnexpectedEOF),
         }
     }
 }
-
-#[derive(Debug, Clone)]
-pub enum ParserError {
-    InvalidToken(Token, Token),
-    UnexpectedToken(Token),
-    UnexpectedEOF,
-    DupArgForNamedParam(String),
-}
-
-impl fmt::Display for ParserError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match &self {
-            ParserError::InvalidToken(actual, expected) => {
-                write!(f, "invalid token: {:?}; expected {:?}", actual, expected)
-            }
-            ParserError::UnexpectedToken(token) => {
-                write!(f, "unexpected token: {:?}", token)
-            }
-            ParserError::UnexpectedEOF => {
-                write!(f, "unexpected EOF")
-            }
-            ParserError::DupArgForNamedParam(name) => {
-                write!(f, "duplicate arg passed for named parameter \"{}\"", name)
-            }
-        }
-    }
-}
-
-pub type ParserResult<T> = Result<T, ParserError>;
 
 #[cfg(test)]
 mod tests {

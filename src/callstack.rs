@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{ast::{AstBinop, AstExpr, AstFnDecl, AstParamKind, AstPrgPart, AstStatement, AstUnop, SpkType, TableCell}, interpretter::{InterpError, InterpResult}, semantics::SemanticAnalyzer, symbol::{SymbolKind, SymbolTable}};
+use crate::{ast::{AstBinop, AstExpr, AstFnDecl, AstParamKind, AstPrgPart, AstStatement, AstUnop, SpkType, TableCell}, semantics::SemanticAnalyzer, sprocket::{SprocketError, SprocketResult}, symbol::{SymbolKind, SymbolTable}};
 
 #[derive(Debug, Clone)]
 pub struct CallStack {
@@ -37,14 +37,14 @@ impl CallStack {
         None
     }
 
-    pub fn lookup_task(&self, symbol:&str) -> InterpResult<Option<&Vec<AstPrgPart>>> {
+    pub fn lookup_task(&self, symbol:&str) -> SprocketResult<Option<&Vec<AstPrgPart>>> {
         for ar in self.ars.iter().rev() {
             match ar.symbols.get(symbol) {
                 Some(SymbolKind::Task(task)) => {
                     return Ok(Some(task))
                 }
                 Some(_) => {
-                    return Err(InterpError::RuntimeTypeError)
+                    return Err(SprocketError::RuntimeTypeError)
                 }
                 None => {
                     continue
@@ -62,18 +62,18 @@ impl CallStack {
         self.ars.last_mut()
     }
 
-    pub fn insert_symbol(&mut self, symbol:&str, kind:SymbolKind) -> InterpResult<Option<SymbolKind>> {
+    pub fn insert_symbol(&mut self, symbol:&str, kind:SymbolKind) -> SprocketResult<Option<SymbolKind>> {
         match self.current_ar_mut() {
             Some(ar) => {
                 Ok(ar.symbols.insert(symbol.to_string(), kind))
             }
             None => {
-                Err(InterpError::EmptyCallStack)
+                Err(SprocketError::EmptyCallStack)
             }
         }
     }
 
-    pub fn lookup_symbol_val(&self, symbol:&str) -> InterpResult<Option<MemTableVal>> {
+    pub fn lookup_symbol_val(&self, symbol:&str) -> SprocketResult<Option<MemTableVal>> {
         for ar in self.ars.iter().rev() {
             match ar.symbols.get(symbol) {
                 Some(SymbolKind::Var(_type_)) => {
@@ -82,12 +82,12 @@ impl CallStack {
                             return Ok(Some(val.clone()))
                         }
                         None => {
-                            return Err(InterpError::SymbolMissingVal(symbol.to_string()))
+                            return Err(SprocketError::SymbolMissingVal(symbol.to_string()))
                         }
                     }
                 }
                 Some(kind) => {
-                    return Err(InterpError::SymbolNotAVar(symbol.to_string(), kind.clone()))
+                    return Err(SprocketError::SymbolNotAVar(symbol.to_string(), kind.clone()))
                 }
                 None => {
                     continue
@@ -97,7 +97,7 @@ impl CallStack {
         Ok(None)
     }
 
-    pub fn set_symbol_val(&mut self, symbol:&str, val:MemTableVal) -> InterpResult<Option<MemTableVal>> {
+    pub fn set_symbol_val(&mut self, symbol:&str, val:MemTableVal) -> SprocketResult<Option<MemTableVal>> {
         for ar in self.ars.iter_mut().rev() {
             match ar.symbols.get(symbol) {
                 Some(SymbolKind::Var(type_)) => {
@@ -108,64 +108,64 @@ impl CallStack {
                             return Ok(ar.mem.insert(symbol.to_string(), val))
                         }
                         _ => {
-                            return Err(InterpError::RuntimeTypeError)
+                            return Err(SprocketError::RuntimeTypeError)
                         }
                     }
                 }
                 Some(kind) => {
-                    return Err(InterpError::SymbolNotAVar(symbol.to_string(), kind.clone()))
+                    return Err(SprocketError::SymbolNotAVar(symbol.to_string(), kind.clone()))
                 }
                 None => {
                     continue
                 }
             }
         }
-        Err(InterpError::SymbolNotDefined(symbol.to_string()))
+        Err(SprocketError::SymbolNotDefined(symbol.to_string()))
     }
 
-    pub fn _lookup_symbol_bool_val(&self, symbol:&str) -> InterpResult<Option<bool>> {
+    pub fn _lookup_symbol_bool_val(&self, symbol:&str) -> SprocketResult<Option<bool>> {
         match self.lookup_symbol_val(symbol)? {
             Some(MemTableVal::Bool(val)) => Ok(Some(val)),
-            Some(_) => Err(InterpError::RuntimeTypeError),
+            Some(_) => Err(SprocketError::RuntimeTypeError),
             None => Ok(None),
         }
     }
 
-    pub fn _lookup_symbol_i32_val(&self, symbol:&str) -> InterpResult<Option<i32>> {
+    pub fn _lookup_symbol_i32_val(&self, symbol:&str) -> SprocketResult<Option<i32>> {
         match self.lookup_symbol_val(symbol)? {
             Some(MemTableVal::Int32(val)) => Ok(Some(val)),
-            Some(_) => Err(InterpError::RuntimeTypeError),
+            Some(_) => Err(SprocketError::RuntimeTypeError),
             None => Ok(None),
         }
     }
 
-    pub fn lookup_symbol_ref_val(&self, symbol:&str) -> InterpResult<Option<String>> {
+    pub fn lookup_symbol_ref_val(&self, symbol:&str) -> SprocketResult<Option<String>> {
         match self.lookup_symbol_val(symbol)? {
             Some(MemTableVal::_RefTo(id)) => Ok(Some(id)),
-            Some(_) => Err(InterpError::RuntimeTypeError),
+            Some(_) => Err(SprocketError::RuntimeTypeError),
             None => Ok(None)
         }
     }
 
-    pub fn bool_val_from_expr(&mut self, expr: &AstExpr, en:bool) -> InterpResult<bool> {
+    pub fn bool_val_from_expr(&mut self, expr: &AstExpr, en:bool) -> SprocketResult<bool> {
         match self.val_from_expr(expr, en)? {
             MemTableVal::Bool(val) => Ok(val),
-            _ => Err(InterpError::RuntimeTypeError)
+            _ => Err(SprocketError::RuntimeTypeError)
         }
     }
 
-    pub fn int_val_from_expr(&mut self, expr: &AstExpr, en:bool) -> InterpResult<i32> {
+    pub fn int_val_from_expr(&mut self, expr: &AstExpr, en:bool) -> SprocketResult<i32> {
         match self.val_from_expr(expr, en)? {
             MemTableVal::Int32(val) => Ok(val),
-            _ => Err(InterpError::RuntimeTypeError)
+            _ => Err(SprocketError::RuntimeTypeError)
         }
     }
 
-    pub fn _ref_id_from_expr(expr: &AstExpr) -> InterpResult<(String, i32)> {
+    pub fn _ref_id_from_expr(expr: &AstExpr) -> SprocketResult<(String, i32)> {
         Self::_ref_id_from_expr_inner(expr, 0)
     }
 
-    fn _ref_id_from_expr_inner(expr: &AstExpr, ref_count: i32) -> InterpResult<(String, i32)> {
+    fn _ref_id_from_expr_inner(expr: &AstExpr, ref_count: i32) -> SprocketResult<(String, i32)> {
         match expr {
             AstExpr::UnopExpr(AstUnop::Ref, inner_expr) => {
                 Self::_ref_id_from_expr_inner(inner_expr.as_ref(), ref_count + 1)
@@ -174,21 +174,21 @@ impl CallStack {
                 Self::_ref_id_from_expr_inner(inner_expr.as_ref(), ref_count - 1)
             }
             AstExpr::IdExpr(id) => Ok((id.clone(), ref_count)),
-            _ => Err(InterpError::RuntimeTypeError),
+            _ => Err(SprocketError::RuntimeTypeError),
         }
     }
 
-    pub fn lookup_fn_decl(&self, symbol:&str) -> InterpResult<Option<AstFnDecl>> {
+    pub fn lookup_fn_decl(&self, symbol:&str) -> SprocketResult<Option<AstFnDecl>> {
         match self.lookup_symbol_kind(symbol) {
             Some(SymbolKind::FunctionDef(fn_def)) => {
                 Ok(Some(fn_def.clone()))
             }
-            Some(_) => Err(InterpError::RuntimeTypeError),
+            Some(_) => Err(SprocketError::RuntimeTypeError),
             None => Ok(None)
         }
     }
 
-    pub fn val_from_expr(&mut self, expr:&AstExpr, en:bool) -> InterpResult<MemTableVal> {
+    pub fn val_from_expr(&mut self, expr:&AstExpr, en:bool) -> SprocketResult<MemTableVal> {
         match expr {
             AstExpr::BoolLiteralExpr(val) => Ok(MemTableVal::Bool(*val)),
             AstExpr::IntLiteralExpr(val) => Ok(MemTableVal::Int32(*val)),
@@ -197,7 +197,7 @@ impl CallStack {
                     Some(val) => {
                         Ok(val)
                     }
-                    None => Err(InterpError::SymbolNotDefined(id.to_string()))
+                    None => Err(SprocketError::SymbolNotDefined(id.to_string()))
                 }
             }
             AstExpr::UnopExpr(op, expr) => {
@@ -218,19 +218,19 @@ impl CallStack {
                         AstExpr::UnopExpr(AstUnop::Ref | AstUnop::Deref, _) => {
                             todo!()
                         }
-                        _ => return Err(InterpError::RuntimeTypeError),
+                        _ => return Err(SprocketError::RuntimeTypeError),
                     },
                 }
             }
             AstExpr::BinopExpr { left, op, right } => {
                 let left_type = match SemanticAnalyzer::eval_expr_type(&left, &self.current_ar().unwrap().symbols) {
                     Ok(left_type) => left_type,
-                    Err(_) => return Err(InterpError::RuntimeTypeError),
+                    Err(_) => return Err(SprocketError::RuntimeTypeError),
                 };
                 let right_type = match SemanticAnalyzer::eval_expr_type(&right, &self.current_ar().unwrap().symbols)
                 {
                     Ok(right_type) => right_type,
-                    Err(_) => return Err(InterpError::RuntimeTypeError),
+                    Err(_) => return Err(SprocketError::RuntimeTypeError),
                 };
                 match (left_type, right_type) {
                     (SpkType::Bool, SpkType::Bool) => {
@@ -242,11 +242,11 @@ impl CallStack {
                             AstBinop::NotEqual => left_val != right_val,
                             AstBinop::Or => left_val || right_val,
                             AstBinop::XOr => left_val ^ right_val,
-                            _ => return Err(InterpError::RuntimeTypeError)
+                            _ => return Err(SprocketError::RuntimeTypeError)
                         };
                         return Ok(MemTableVal::Bool(val))
                     }
-                    (SpkType::Bool, _) => return Err(InterpError::RuntimeTypeError),
+                    (SpkType::Bool, _) => return Err(SprocketError::RuntimeTypeError),
                     (SpkType::Int32, SpkType::Int32) => {
                         let left_val = self.int_val_from_expr(left, en)?;
                         let right_val = self.int_val_from_expr(right, en)?;
@@ -269,7 +269,7 @@ impl CallStack {
                         };
                         return Ok(val)
                     }
-                    _ => return Err(InterpError::RuntimeTypeError)
+                    _ => return Err(SprocketError::RuntimeTypeError)
                 }
             }
             AstExpr::CallExpr { id, pos_args, named_args } => {
@@ -278,11 +278,11 @@ impl CallStack {
                 self.set_symbol_val("__en__", MemTableVal::Bool(en))?;
                 let fn_def = match self.lookup_fn_decl(id)? {
                     Some(fn_def) => fn_def,
-                    None => return Err(InterpError::UndefFunction(id.clone()))
+                    None => return Err(SprocketError::UndefFunction(id.clone()))
                 };
                 match &fn_def.ret_type {
                     SpkType::Void => {}
-                    SpkType::Unresolved(_) => return Err(InterpError::RuntimeTypeError),
+                    SpkType::Unresolved(_) => return Err(SprocketError::RuntimeTypeError),
                     type_ => {
                         self.insert_symbol("__ret__", SymbolKind::Var(type_.clone()))?;
                     }
@@ -314,10 +314,10 @@ impl CallStack {
                     }
                     let dest_id = match named_args.get(&param.id) {
                         Some(AstExpr::IdExpr(id)) => id,
-                        Some(_) => return Err(InterpError::RuntimeTypeError),
+                        Some(_) => return Err(SprocketError::RuntimeTypeError),
                         None => match &pos_args[idx] {
                             AstExpr::IdExpr(id) => id,
-                            _ => return Err(InterpError::RuntimeTypeError)
+                            _ => return Err(SprocketError::RuntimeTypeError)
                         }
                     };
                     let dest_val = self.lookup_symbol_val(&param.id)?.unwrap();
@@ -333,7 +333,7 @@ impl CallStack {
         }
     }
 
-    pub fn exe_prg_part(&mut self, part: &AstPrgPart) -> InterpResult<()> {
+    pub fn exe_prg_part(&mut self, part: &AstPrgPart) -> SprocketResult<()> {
         match part {
             AstPrgPart::Comment(_) => Ok(()),
             AstPrgPart::TagDecl(tag_decl) => {
@@ -343,7 +343,7 @@ impl CallStack {
                     None => match &tag_decl.type_ {
                         SpkType::Bool => MemTableVal::Bool(false),
                         SpkType::Int32 => MemTableVal::Int32(0),
-                        _ => return Err(InterpError::RuntimeTypeError)
+                        _ => return Err(SprocketError::RuntimeTypeError)
                     }
                 };
                 self.set_symbol_val(&tag_decl.id, init_val)?;

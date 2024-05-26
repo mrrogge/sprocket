@@ -1,4 +1,4 @@
-use std::fmt;
+use std::{error::Error, fmt};
 
 use crate::{ast::SpkType, symbol::SymbolKind, token::Token};
 
@@ -39,16 +39,23 @@ pub enum SprocketError {
     EmptyCallStack,
     UndefFunction(String),
     RuntimeTypeError,
+    MiscError,
 }
 
 impl fmt::Display for SprocketError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::DerefInvalid(type_) => write!(f, "Cannot dereference type {}", type_),
-            Self::UnexpectedToken(unexpected, Some(expected)) => write!(f, "Unexpected token {}; expected {}", unexpected, expected),
-            Self::UnexpectedToken(unexpected, None) => write!(f, "unexpected token: {}", unexpected),
+            Self::UnexpectedToken(unexpected, Some(expected)) => {
+                write!(f, "Unexpected token {}; expected {}", unexpected, expected)
+            }
+            Self::UnexpectedToken(unexpected, None) => {
+                write!(f, "unexpected token: {}", unexpected)
+            }
             Self::UnexpectedEOF => write!(f, "unexpected end-of-file"),
-            Self::DupArgForNamedParam(name) => write!(f, "duplicate argument for named parameter: {}", name),
+            Self::DupArgForNamedParam(name) => {
+                write!(f, "duplicate argument for named parameter: {}", name)
+            }
             Self::DupTagDecl(id) => write!(f, "duplicate tag declaration: {}", id),
             Self::TypeUndef(id) => write!(f, "undefined type: {}", id),
             Self::ExpectedType(_) => todo!(),
@@ -67,8 +74,11 @@ impl fmt::Display for SprocketError {
             Self::EmptyCallStack => todo!(),
             Self::UndefFunction(_) => todo!(),
             Self::RuntimeTypeError => todo!(),
+            Self::MiscError => todo!(),
         }
     }
 }
+
+impl Error for SprocketError {}
 
 pub type SprocketResult<T> = Result<T, SprocketError>;

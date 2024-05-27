@@ -62,11 +62,6 @@ impl SprocketParser {
         Ok(ast)
     }
 
-    pub fn reset(&mut self) {
-        self.lexer.init("");
-        self.next_token = None;
-    }
-
     fn advance(&mut self) {
         self.next_token = self.lexer.next();
     }

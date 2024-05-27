@@ -1,7 +1,12 @@
-
 use std::io::{self, Write};
 
-use crate::{ast::{AstPrgPart, AstStatement}, callstack::CallStack, parser::SprocketParser, semantics::SemanticAnalyzer, sprocket::{SprocketError, SprocketResult}, symbol::SymbolKind};
+use crate::{
+    ast::{AstPrgPart, AstStatement},
+    callstack::CallStack,
+    parser::SprocketParser,
+    semantics::SemanticAnalyzer,
+    sprocket::{SprocketError, SprocketResult},
+};
 
 pub struct SprocketRepl {
     parser: SprocketParser,
@@ -14,7 +19,7 @@ impl SprocketRepl {
         callstack.push(None);
         Self {
             parser: SprocketParser::new(),
-            callstack
+            callstack,
         }
     }
 
@@ -23,9 +28,7 @@ impl SprocketRepl {
         let analyzer = SemanticAnalyzer::new();
         loop {
             match self.update(&mut buf, &analyzer) {
-                Ok(true) => {
-                    break
-                },
+                Ok(true) => break,
                 Ok(false) => {}
                 Err(err) => {
                     println!("Error: {}", err);
@@ -36,12 +39,11 @@ impl SprocketRepl {
         Ok(())
     }
 
-    fn update(&mut self, buf: &mut String, analyzer:&SemanticAnalyzer) -> SprocketResult<bool> {
+    fn update(&mut self, buf: &mut String, analyzer: &SemanticAnalyzer) -> SprocketResult<bool> {
         let mut stdout = io::stdout();
         if buf.len() > 0 {
             stdout.write_all(b"..>").unwrap();
-        }
-        else {
+        } else {
             stdout.write_all(b"\xE2\x9A\x99 > ").unwrap();
         }
         stdout.flush().unwrap();
@@ -49,7 +51,7 @@ impl SprocketRepl {
         io::stdin().read_line(buf).unwrap();
         *buf = buf.trim().to_string();
         if buf == "exit" {
-            return Ok(true)
+            return Ok(true);
         }
         match self.parser.parse(&buf) {
             Ok(ast) => {
@@ -64,7 +66,7 @@ impl SprocketRepl {
             }
             Err(SprocketError::UnexpectedEOF) => {
                 buf.push(' ');
-                return Ok(false)
+                return Ok(false);
             }
             Err(err) => {
                 println!("{:?}", err);

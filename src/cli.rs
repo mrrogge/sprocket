@@ -1,12 +1,11 @@
 use clap::Parser;
 use serde::Deserialize;
 use std::fs::File;
-use std::io;
 use std::io::Write;
 use std::path::PathBuf;
 
 use crate::interpretter::SprocketInterpretter;
-use crate::parser::SprocketParser;
+
 use crate::repl::SprocketRepl;
 use crate::sprocket::{SprocketError, SprocketResult};
 
@@ -96,5 +95,4 @@ impl Cli {
         interp.run().unwrap();
         Ok(())
     }
-
 }

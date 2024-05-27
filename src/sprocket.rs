@@ -60,16 +60,27 @@ impl fmt::Display for SprocketError {
             Self::TypeUndef(id) => write!(f, "undefined type: {}", id),
             Self::ExpectedType(id) => write!(f, "expected a type but got {}", id),
             Self::ExpectedVar(id) => write!(f, "expected a variable but got {}", id),
-            Self::ExpectedExprGotType(id) => write!(f, "expected an expression but got type {}", id),
+            Self::ExpectedExprGotType(id) => {
+                write!(f, "expected an expression but got type {}", id)
+            }
             Self::VarNotDecl(id) => write!(f, "variable {} not declared", id),
-            Self::ExpectedExprTypeOf(expected, unexpected) => write!(f, "expected an expression of type {} but got {}", expected, unexpected),
+            Self::ExpectedExprTypeOf(expected, unexpected) => write!(
+                f,
+                "expected an expression of type {} but got {}",
+                expected, unexpected
+            ),
             Self::InvalidType(type_) => write!(f, "invalid type: {}", type_),
             Self::TagInitReq(type_) => write!(f, "initial value required for tag type {}", type_),
-            Self::RetStmtNotInFnDecl => write!(f, "Return statement not allowed outside of function declaration"),
+            Self::RetStmtNotInFnDecl => write!(
+                f,
+                "Return statement not allowed outside of function declaration"
+            ),
             Self::FnNotDecl(id) => write!(f, "function {} not declared", id),
             Self::SymbolNotCallable(id) => write!(f, "{} is not callable", id),
             Self::SymbolNotDefined(id) => write!(f, "{} is not defined", id),
-            Self::SymbolNotAVar(id, kind) => write!(f, "symbol {} is a {} but should be a variable", id, kind),
+            Self::SymbolNotAVar(id, kind) => {
+                write!(f, "symbol {} is a {} but should be a variable", id, kind)
+            }
             Self::SymbolMissingVal(id) => write!(f, "symbol {} does not have a value", id),
             Self::EmptyCallStack => write!(f, "callstack is empty"),
             Self::UndefFunction(id) => write!(f, "function {} is undefined", id),

@@ -208,17 +208,11 @@ impl CallStack {
                 },
             },
             AstExpr::BinopExpr { left, op, right } => {
-                let left_type = match SemanticAnalyzer::eval_expr_type(
-                    &left,
-                    &self,
-                ) {
+                let left_type = match SemanticAnalyzer::eval_expr_type(&left, &self) {
                     Ok(left_type) => left_type,
                     Err(_) => return Err(SprocketError::RuntimeTypeError),
                 };
-                let right_type = match SemanticAnalyzer::eval_expr_type(
-                    &right,
-                    &self,
-                ) {
+                let right_type = match SemanticAnalyzer::eval_expr_type(&right, &self) {
                     Ok(right_type) => right_type,
                     Err(_) => return Err(SprocketError::RuntimeTypeError),
                 };

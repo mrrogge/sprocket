@@ -6,11 +6,11 @@ mod cli;
 mod interpretter;
 mod lexer;
 mod parser;
+mod repl;
 mod semantics;
 mod sprocket;
 mod symbol;
 mod token;
-mod repl;
 
 fn main() -> SprocketResult<()> {
     cli::Cli::run()

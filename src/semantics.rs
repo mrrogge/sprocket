@@ -12,7 +12,7 @@ impl SemanticAnalyzer {
         SemanticAnalyzer {}
     }
 
-    pub fn analyze(&mut self, ast: &AST, callstack: &mut CallStack) -> SprocketResult<()> {
+    pub fn analyze(&self, ast: &AST, callstack: &mut CallStack) -> SprocketResult<()> {
         for part in ast {
             match &part {
                 AstPrgPart::TagDecl(decl) => {

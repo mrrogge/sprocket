@@ -25,7 +25,7 @@ impl SprocketInterpretter {
         let mut parser = SprocketParser::new();
         let ast = parser.parse(source)?;
 
-        let mut sem_analyzer = SemanticAnalyzer::new();
+        let sem_analyzer = SemanticAnalyzer::new();
         let mut callstack = CallStack::new();
         callstack.push(None);
         callstack.load_globals()?;

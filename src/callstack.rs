@@ -1,3 +1,4 @@
+use core::fmt;
 use std::collections::HashMap;
 
 use crate::{
@@ -478,4 +479,14 @@ pub enum MemTableVal {
     Bool(bool),
     Int32(i32),
     _RefTo(String),
+}
+
+impl fmt::Display for MemTableVal {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            MemTableVal::Bool(val) => write!(f, "{}", val),
+            MemTableVal::Int32(val) => write!(f, "{}", val),
+            MemTableVal::_RefTo(val) => write!(f, "&{}", val),
+        }
+    }
 }

@@ -10,6 +10,7 @@ mod semantics;
 mod sprocket;
 mod symbol;
 mod token;
+mod repl;
 
 fn main() -> SprocketResult<()> {
     cli::Cli::run()

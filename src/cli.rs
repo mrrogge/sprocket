@@ -7,6 +7,7 @@ use std::path::PathBuf;
 
 use crate::interpretter::SprocketInterpretter;
 use crate::parser::SprocketParser;
+use crate::repl::SprocketRepl;
 use crate::sprocket::{SprocketError, SprocketResult};
 
 #[derive(Deserialize)]
@@ -62,7 +63,8 @@ impl Cli {
         if let Some(_) = &cli.input_path {
             return cli.run_parse_input();
         }
-        cli.run_repl()
+        let repl = SprocketRepl::new();
+        repl.run()
     }
 
     pub fn run_parse_input(&self) -> SprocketResult<()> {
@@ -95,36 +97,4 @@ impl Cli {
         Ok(())
     }
 
-    pub fn run_repl(&self) -> SprocketResult<()> {
-        let mut parser = SprocketParser::new();
-        loop {
-            let mut stdout = io::stdout();
-            stdout.write_all(b"\xE2\x9A\x99 > ").unwrap();
-            stdout.flush().unwrap();
-
-            let mut buf = String::new();
-            match io::stdin().read_line(&mut buf) {
-                Ok(_) => {}
-                Err(_) => return Err(SprocketError::MiscError),
-            };
-            buf = buf.trim().to_string();
-            if buf == "exit" {
-                break;
-            }
-            match parser.parse(&buf) {
-                Ok(ast) => {
-                    for ast_node in ast {
-                        println!("{:?}", ast_node);
-                    }
-                    parser.reset();
-                }
-                // TODO: we could make this REPL allow continuing user input across newlines, but this will require some work at the parser.
-                Err(err) => {
-                    println!("{:?}", err);
-                }
-            }
-            buf.clear();
-        }
-        Ok(())
-    }
 }

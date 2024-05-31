@@ -420,6 +420,9 @@ impl CallStack {
                 }
                 Ok(())
             }
+            AstPrgPart::Statement(AstStatement::StmtBlock(block)) => {
+                todo!()
+            }
         }
     }
 

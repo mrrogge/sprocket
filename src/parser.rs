@@ -895,4 +895,16 @@ mod tests {
              ) if matches!(**right, AstExpr::BinopExpr { left: _, op: AstBinop::Plus, right: _ })
         ));
     }
+
+    #[test]
+    fn parses_stmt_blocks() {
+        let mut parser = SprocketParser::new();
+        let result = parser.parse("{tag1; tag2;}");
+        assert!(matches!(
+            &result.unwrap()[0],
+            AstPrgPart::Statement(AstStatement::StmtBlock(block))
+            if matches!(block[0], AstPrgPart::Statement(AstStatement::ExprStatement(AstExpr::IdExpr(_))))
+            && matches!(block[1], AstPrgPart::Statement(AstStatement::ExprStatement(AstExpr::IdExpr(_))))
+        ));
+    }
 }

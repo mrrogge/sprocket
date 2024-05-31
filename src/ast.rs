@@ -25,6 +25,7 @@ pub enum AstStatement {
     AssignStatement { target_id: String, expr: AstExpr },
     ExprStatement(AstExpr),
     ReturnStatement(Option<AstExpr>),
+    StmtBlock(Vec<AstPrgPart>),
 }
 
 #[derive(Clone, Debug)]

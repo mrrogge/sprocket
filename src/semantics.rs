@@ -79,6 +79,9 @@ impl SemanticAnalyzer {
                 AstPrgPart::Statement(AstStatement::ReturnStatement(_)) => {
                     return Err(SprocketError::RetStmtNotInFnDecl)
                 }
+                AstPrgPart::Statement(AstStatement::StmtBlock(block)) => {
+                    todo!()
+                }
             }
         }
         Ok(())

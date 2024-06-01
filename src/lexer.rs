@@ -90,9 +90,21 @@ impl Lexer {
     fn try_keyword(&mut self) -> Option<Token> {
         let mut kw_string = String::new();
         let mut peek_pos: usize = 0;
+        if let Some(c) = self.peek_char(peek_pos) {
+            if c.is_ascii_alphabetic() || c == '_' {
+                kw_string.push(c);
+                peek_pos += 1;
+            }
+            else {
+                return None
+            }
+        }
+        else {
+            return None
+        }
         loop {
             if let Some(c) = self.peek_char(peek_pos) {
-                if c.is_ascii_alphabetic() || c == '_' {
+                if c.is_ascii_alphabetic() || c == '_' || c.is_digit(10) {
                     kw_string.push(c);
                     peek_pos += 1;
                 } else {
@@ -596,6 +608,14 @@ mod tests {
         let tag_name = "modIsAKeywordButThisIsATag";
         lexer.init(tag_name);
         assert!(matches!(lexer.next(), Some(Token::Id(id)) if id == tag_name));
+    }
+
+    #[test]
+    fn lexes_id_that_starts_with_keyword_and_ends_with_int() {
+        let mut lexer = Lexer::new();
+        let tag_name = "tag1";
+        lexer.init(tag_name);
+        assert!(matches!(lexer.next(), Some(Token::Id(id)) if id == tag_name))
     }
 
     #[test]

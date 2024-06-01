@@ -31,32 +31,18 @@ impl SprocketParser {
         self.advance();
         loop {
             match &self.next_token {
-                Some(Token::Comment(_)) => {
-                    if self.strip_comments {
-                        self.eat(Token::Comment("".to_string()))?;
-                    } else {
-                        let comment = self.process_comment()?;
-                        ast.push(AstPrgPart::Comment(comment));
+                Some(_) => {
+                    let part = self.process_prg_part()?;
+                    if let AstPrgPart::Comment(_) = part {
+                        if !self.strip_comments {
+                            ast.push(part);
+                        }
+                    }
+                    else {
+                        ast.push(part);
                     }
                 }
-                Some(Token::Newline) => {
-                    self.eat(Token::Newline)?;
-                }
-                Some(Token::Keyword(TokenKeyword::Global | TokenKeyword::Tag)) => {
-                    let tag_decl = self.process_tag_decl()?;
-                    ast.push(AstPrgPart::TagDecl(tag_decl));
-                }
-                Some(Token::Keyword(TokenKeyword::Function)) => {
-                    let fn_decl = self.process_fn_decl()?;
-                    ast.push(AstPrgPart::FnDecl(fn_decl));
-                }
-                Some(_) => {
-                    let statement = self.process_statement()?;
-                    ast.push(AstPrgPart::Statement(statement));
-                }
-                None => {
-                    break;
-                }
+                None => break,
             }
         }
         Ok(ast)
@@ -100,6 +86,34 @@ impl SprocketParser {
             }
             Some(token) => Err(SprocketError::UnexpectedToken(token.clone(), None)),
             None => Err(SprocketError::UnexpectedEOF),
+        }
+    }
+
+    fn process_prg_part(&mut self) -> SprocketResult<AstPrgPart> {
+        loop {
+            match &self.next_token {
+                Some(Token::Comment(_)) => {
+                    let comment = self.process_comment()?;
+                    return Ok(AstPrgPart::Comment(comment));
+                }
+                Some(Token::Newline) => {
+                    self.eat(Token::Newline)?;
+                    continue;
+                }
+                Some(Token::Keyword(TokenKeyword::Global | TokenKeyword::Tag)) => {
+                    let tag_decl = self.process_tag_decl()?;
+                    return Ok(AstPrgPart::TagDecl(tag_decl));
+                }
+                Some(Token::Keyword(TokenKeyword::Function)) => {
+                    let fn_decl = self.process_fn_decl()?;
+                    return Ok(AstPrgPart::FnDecl(fn_decl));
+                }
+                Some(_) => {
+                    let statement = self.process_statement()?;
+                    return Ok(AstPrgPart::Statement(statement));
+                }
+                None => return Err(SprocketError::UnexpectedEOF),
+            }
         }
     }
 
@@ -377,6 +391,7 @@ impl SprocketParser {
                     None => Err(SprocketError::UnexpectedEOF),
                 }
             }
+            Some(Token::LCurly) => self.process_stmt_block(),
             Some(_) => self.process_expr_stmt(),
             None => Err(SprocketError::UnexpectedEOF),
         }
@@ -726,6 +741,23 @@ impl SprocketParser {
             None => Err(SprocketError::UnexpectedEOF),
         }
     }
+
+    fn process_stmt_block(&mut self) -> SprocketResult<AstStatement> {
+        self.eat(Token::LCurly)?;
+        let mut block: Vec<AstPrgPart> = vec![];
+        loop {
+            match &self.next_token {
+                Some(Token::RCurly) => {
+                    self.eat(Token::RCurly)?;
+                    return Ok(AstStatement::StmtBlock(block));
+                }
+                Some(_) => {
+                    block.push(self.process_prg_part()?);
+                }
+                None => return Err(SprocketError::UnexpectedEOF),
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -899,12 +931,37 @@ mod tests {
     #[test]
     fn parses_stmt_blocks() {
         let mut parser = SprocketParser::new();
-        let result = parser.parse("{tag1; tag2;}");
+        let result = parser.parse("{test1; test2;}");
         assert!(matches!(
             &result.unwrap()[0],
             AstPrgPart::Statement(AstStatement::StmtBlock(block))
             if matches!(block[0], AstPrgPart::Statement(AstStatement::ExprStatement(AstExpr::IdExpr(_))))
             && matches!(block[1], AstPrgPart::Statement(AstStatement::ExprStatement(AstExpr::IdExpr(_))))
         ));
+    }
+
+    #[test]
+    fn parses_empty_blocks() {
+        let mut parser = SprocketParser::new();
+        let result = parser.parse("{}");
+        assert!(matches!(
+            &result.unwrap()[0],
+            AstPrgPart::Statement(AstStatement::StmtBlock(block)) if block.len() == 0
+        ));
+    }
+
+    #[test]
+    fn parses_block_following_block() {
+        let mut parser = SprocketParser::new();
+        let result = parser.parse("{}{}");
+        assert!(matches!(&result.as_ref().unwrap()[0], AstPrgPart::Statement(AstStatement::StmtBlock(_))));
+        assert!(matches!(&result.as_ref().unwrap()[1], AstPrgPart::Statement(AstStatement::StmtBlock(_))));
+    }
+
+    #[test]
+    fn parses_inner_block() {
+        let mut parser = SprocketParser::new();
+        let result = parser.parse("{{}}");
+        assert!(matches!(&result.unwrap()[0], AstPrgPart::Statement(AstStatement::StmtBlock(block)) if matches!(block[0], AstPrgPart::Statement(AstStatement::StmtBlock(_)))))
     }
 }

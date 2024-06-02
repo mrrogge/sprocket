@@ -257,4 +257,15 @@ mod tests {
         cs.push(None);
         assert!(matches!(analyzer.analyze(&ast, &mut cs), Ok(())))
     }
+
+    #[test]
+    fn allows_dup_tag_name_in_inner_scope() {
+        let mut parser = SprocketParser::new();
+        let ast = parser.parse("tag test:bool; {tag test:bool;}").unwrap();
+        let analyzer = SemanticAnalyzer::new();
+        let mut cs = CallStack::new();
+        cs.push(None);
+        println!("{:?}", analyzer.analyze(&ast, &mut cs));
+        assert!(matches!(analyzer.analyze(&ast, &mut cs), Ok(())))
+    }
 }

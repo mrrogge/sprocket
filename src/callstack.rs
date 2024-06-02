@@ -492,3 +492,9 @@ impl fmt::Display for MemTableVal {
         }
     }
 }
+
+pub enum ScopeKind {
+    Current,
+    Global,
+    Any,
+}

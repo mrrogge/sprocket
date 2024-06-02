@@ -80,7 +80,9 @@ impl SemanticAnalyzer {
                     return Err(SprocketError::RetStmtNotInFnDecl)
                 }
                 AstPrgPart::Statement(AstStatement::StmtBlock(block)) => {
-                    todo!()
+                    callstack.push(None);
+                    self.analyze(block, callstack)?;
+                    callstack.pop();
                 }
             }
         }

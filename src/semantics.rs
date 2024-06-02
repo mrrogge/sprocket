@@ -16,9 +16,6 @@ impl SemanticAnalyzer {
         for part in ast {
             match &part {
                 AstPrgPart::TagDecl(decl) => {
-                    if !decl.is_global {
-                        todo!()
-                    }
                     match callstack.lookup_symbol_kind(&decl.id) {
                         Some(_) => return Err(SprocketError::DupTagDecl(decl.id.clone())),
                         None => {}
@@ -232,5 +229,32 @@ impl SemanticAnalyzer {
             )?))),
             SpkType::Bool | SpkType::Int32 | SpkType::Void => Ok(typeref.clone()),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::parser::SprocketParser;
+
+    use super::*;
+
+    #[test]
+    fn catches_tag_access_outside_block() {
+        let mut parser = SprocketParser::new();
+        let ast = parser.parse("{tag test:bool;} test;").unwrap();
+        let analyzer = SemanticAnalyzer::new();
+        let mut cs = CallStack::new();
+        cs.push(None);
+        assert!(matches!(analyzer.analyze(&ast, &mut cs), Err(SprocketError::VarNotDecl(tag)) if tag == "test".to_string()))
+    }
+
+    #[test]
+    fn allows_outer_tag_access_from_block() {
+        let mut parser = SprocketParser::new();
+        let ast = parser.parse("tag test:bool; {test;}").unwrap();
+        let analyzer = SemanticAnalyzer::new();
+        let mut cs = CallStack::new();
+        cs.push(None);
+        assert!(matches!(analyzer.analyze(&ast, &mut cs), Ok(())))
     }
 }

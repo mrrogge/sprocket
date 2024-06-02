@@ -1,6 +1,6 @@
 use crate::{
     ast::{AstBinop, AstExpr, AstPrgPart, AstStatement, AstUnop, SpkType, TableCell, AST},
-    callstack::CallStack,
+    callstack::{CallStack, ScopeKind},
     sprocket::{SprocketError, SprocketResult},
     symbol::SymbolKind,
 };
@@ -16,7 +16,7 @@ impl SemanticAnalyzer {
         for part in ast {
             match &part {
                 AstPrgPart::TagDecl(decl) => {
-                    match callstack.lookup_symbol_kind(&decl.id) {
+                    match callstack.lookup_symbol_kind(&decl.id, ScopeKind::Current) {
                         Some(_) => return Err(SprocketError::DupTagDecl(decl.id.clone())),
                         None => {}
                     }
@@ -40,7 +40,7 @@ impl SemanticAnalyzer {
                     callstack.insert_symbol(&decl.id, SymbolKind::FunctionDef(decl.clone()))?;
                 }
                 AstPrgPart::Statement(AstStatement::AssignStatement { target_id, expr }) => {
-                    let var_type = match callstack.lookup_symbol_kind(target_id) {
+                    let var_type = match callstack.lookup_symbol_kind(target_id, ScopeKind::Any) {
                         Some(SymbolKind::Var(var_type)) => var_type.clone(),
                         Some(_) => return Err(SprocketError::ExpectedVar(target_id.clone())),
                         None => return Err(SprocketError::VarNotDecl(target_id.clone())),
@@ -91,7 +91,7 @@ impl SemanticAnalyzer {
             AstExpr::BoolLiteralExpr(_) => Ok(SpkType::Bool),
             AstExpr::IntLiteralExpr(_) => Ok(SpkType::Int32),
             AstExpr::IdExpr(id) => {
-                let type_ = match callstack.lookup_symbol_kind(id) {
+                let type_ = match callstack.lookup_symbol_kind(id, ScopeKind::Any) {
                     Some(SymbolKind::Var(type_)) => type_,
                     Some(SymbolKind::Type(_)) => {
                         return Err(SprocketError::ExpectedExprGotType(id.clone()))
@@ -193,7 +193,7 @@ impl SemanticAnalyzer {
                 pos_args: _,
                 named_args: _,
             } => {
-                let fn_def = match callstack.lookup_symbol_kind(id) {
+                let fn_def = match callstack.lookup_symbol_kind(id, ScopeKind::Any) {
                     Some(fn_def) => match fn_def {
                         SymbolKind::FunctionDef(fn_def) => fn_def,
                         _ => return Err(SprocketError::SymbolNotCallable(id.clone())),
@@ -209,7 +209,7 @@ impl SemanticAnalyzer {
     pub fn eval_typeref(typeref: &SpkType, callstack: &CallStack) -> SprocketResult<SpkType> {
         match typeref {
             SpkType::Unresolved(id) => {
-                let type_ = match callstack.lookup_symbol_kind(id) {
+                let type_ = match callstack.lookup_symbol_kind(id, ScopeKind::Any) {
                     Some(SymbolKind::Type(type_)) => type_,
                     Some(SymbolKind::Var(_)) => {
                         return Err(SprocketError::ExpectedType(id.clone()))
@@ -265,7 +265,6 @@ mod tests {
         let analyzer = SemanticAnalyzer::new();
         let mut cs = CallStack::new();
         cs.push(None);
-        println!("{:?}", analyzer.analyze(&ast, &mut cs));
         assert!(matches!(analyzer.analyze(&ast, &mut cs), Ok(())))
     }
 }

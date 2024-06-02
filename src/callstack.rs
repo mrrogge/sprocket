@@ -30,8 +30,26 @@ impl CallStack {
         self.ars.pop()
     }
 
-    pub fn lookup_symbol_kind(&self, symbol: &str) -> Option<SymbolKind> {
-        for ar in self.ars.iter().rev() {
+    fn ar_slice_for_scope_kind(&self, scope:ScopeKind) -> &[ActivationRecord] {
+        match scope {
+            ScopeKind::Any => &self.ars[..],
+            ScopeKind::Current => &self.ars[self.ars.len()-1..],
+            ScopeKind::Global => &self.ars[0..1],
+        }
+    }
+
+    fn ar_mut_slice_for_scope_kind(&mut self, scope:ScopeKind) -> &mut [ActivationRecord] {
+        match scope {
+            ScopeKind::Any => &mut self.ars[..],
+            ScopeKind::Current => {
+                let len = self.ars.len();
+                &mut self.ars[len-1..]}
+            ScopeKind::Global => &mut self.ars[0..1],
+        }
+    }
+
+    pub fn lookup_symbol_kind(&self, symbol: &str, scope:ScopeKind) -> Option<SymbolKind> {
+        for ar in self.ar_slice_for_scope_kind(scope).iter().rev() {
             match ar.symbols.get(symbol) {
                 Some(kind) => return Some(kind.clone()),
                 None => continue,
@@ -40,8 +58,8 @@ impl CallStack {
         None
     }
 
-    pub fn lookup_task(&self, symbol: &str) -> SprocketResult<Option<&Vec<AstPrgPart>>> {
-        for ar in self.ars.iter().rev() {
+    pub fn lookup_task(&self, symbol: &str, scope:ScopeKind) -> SprocketResult<Option<&Vec<AstPrgPart>>> {
+        for ar in self.ar_slice_for_scope_kind(scope).iter().rev() {
             match ar.symbols.get(symbol) {
                 Some(SymbolKind::Task(task)) => return Ok(Some(task)),
                 Some(_) => return Err(SprocketError::RuntimeTypeError),
@@ -70,8 +88,8 @@ impl CallStack {
         }
     }
 
-    pub fn lookup_symbol_val(&self, symbol: &str) -> SprocketResult<Option<MemTableVal>> {
-        for ar in self.ars.iter().rev() {
+    pub fn lookup_symbol_val(&self, symbol: &str, scope:ScopeKind) -> SprocketResult<Option<MemTableVal>> {
+        for ar in self.ar_slice_for_scope_kind(scope).iter().rev() {
             match ar.symbols.get(symbol) {
                 Some(SymbolKind::Var(_type_)) => match ar.mem.get(symbol) {
                     Some(val) => return Ok(Some(val.clone())),
@@ -92,9 +110,9 @@ impl CallStack {
     pub fn set_symbol_val(
         &mut self,
         symbol: &str,
-        val: MemTableVal,
+        val: MemTableVal, scope:ScopeKind,
     ) -> SprocketResult<Option<MemTableVal>> {
-        for ar in self.ars.iter_mut().rev() {
+        for ar in self.ar_mut_slice_for_scope_kind(scope).iter_mut().rev() {
             match ar.symbols.get(symbol) {
                 Some(SymbolKind::Var(type_)) => match (type_, val) {
                     (SpkType::Bool, val @ MemTableVal::Bool(_))
@@ -116,24 +134,24 @@ impl CallStack {
         Err(SprocketError::SymbolNotDefined(symbol.to_string()))
     }
 
-    pub fn _lookup_symbol_bool_val(&self, symbol: &str) -> SprocketResult<Option<bool>> {
-        match self.lookup_symbol_val(symbol)? {
+    pub fn _lookup_symbol_bool_val(&self, symbol: &str, scope:ScopeKind) -> SprocketResult<Option<bool>> {
+        match self.lookup_symbol_val(symbol, scope)? {
             Some(MemTableVal::Bool(val)) => Ok(Some(val)),
             Some(_) => Err(SprocketError::RuntimeTypeError),
             None => Ok(None),
         }
     }
 
-    pub fn _lookup_symbol_i32_val(&self, symbol: &str) -> SprocketResult<Option<i32>> {
-        match self.lookup_symbol_val(symbol)? {
+    pub fn _lookup_symbol_i32_val(&self, symbol: &str, scope:ScopeKind) -> SprocketResult<Option<i32>> {
+        match self.lookup_symbol_val(symbol, scope)? {
             Some(MemTableVal::Int32(val)) => Ok(Some(val)),
             Some(_) => Err(SprocketError::RuntimeTypeError),
             None => Ok(None),
         }
     }
 
-    pub fn lookup_symbol_ref_val(&self, symbol: &str) -> SprocketResult<Option<String>> {
-        match self.lookup_symbol_val(symbol)? {
+    pub fn lookup_symbol_ref_val(&self, symbol: &str, scope:ScopeKind) -> SprocketResult<Option<String>> {
+        match self.lookup_symbol_val(symbol, scope)? {
             Some(MemTableVal::_RefTo(id)) => Ok(Some(id)),
             Some(_) => Err(SprocketError::RuntimeTypeError),
             None => Ok(None),
@@ -171,8 +189,8 @@ impl CallStack {
         }
     }
 
-    pub fn lookup_fn_decl(&self, symbol: &str) -> SprocketResult<Option<AstFnDecl>> {
-        match self.lookup_symbol_kind(symbol) {
+    pub fn lookup_fn_decl(&self, symbol: &str, scope:ScopeKind) -> SprocketResult<Option<AstFnDecl>> {
+        match self.lookup_symbol_kind(symbol, scope) {
             Some(SymbolKind::FunctionDef(fn_def)) => Ok(Some(fn_def.clone())),
             Some(_) => Err(SprocketError::RuntimeTypeError),
             None => Ok(None),
@@ -183,7 +201,7 @@ impl CallStack {
         match expr {
             AstExpr::BoolLiteralExpr(val) => Ok(MemTableVal::Bool(*val)),
             AstExpr::IntLiteralExpr(val) => Ok(MemTableVal::Int32(*val)),
-            AstExpr::IdExpr(id) => match self.lookup_symbol_val(id)? {
+            AstExpr::IdExpr(id) => match self.lookup_symbol_val(id, ScopeKind::Any)? {
                 Some(val) => Ok(val),
                 None => Err(SprocketError::SymbolNotDefined(id.to_string())),
             },
@@ -197,8 +215,8 @@ impl CallStack {
                 }
                 AstUnop::Deref => match expr.as_ref() {
                     AstExpr::IdExpr(id) => {
-                        let deref_id = self.lookup_symbol_ref_val(id)?.unwrap();
-                        let val = self.lookup_symbol_val(&deref_id)?.unwrap();
+                        let deref_id = self.lookup_symbol_ref_val(id, ScopeKind::Any)?.unwrap();
+                        let val = self.lookup_symbol_val(&deref_id, ScopeKind::Any)?.unwrap();
                         return Ok(val);
                     }
                     AstExpr::UnopExpr(AstUnop::Ref | AstUnop::Deref, _) => {
@@ -265,8 +283,8 @@ impl CallStack {
             } => {
                 self.push(None);
                 self.insert_symbol("__en__", SymbolKind::Var(SpkType::Bool))?;
-                self.set_symbol_val("__en__", MemTableVal::Bool(en))?;
-                let fn_def = match self.lookup_fn_decl(id)? {
+                self.set_symbol_val("__en__", MemTableVal::Bool(en), ScopeKind::Current)?;
+                let fn_def = match self.lookup_fn_decl(id, ScopeKind::Any)? {
                     Some(fn_def) => fn_def,
                     None => return Err(SprocketError::UndefFunction(id.clone())),
                 };
@@ -286,7 +304,7 @@ impl CallStack {
                     match &param.kind {
                         AstParamKind::In | AstParamKind::InOut => {
                             let val = self.val_from_expr(arg_val, en)?;
-                            self.set_symbol_val(&param.id, val)?;
+                            self.set_symbol_val(&param.id, val, ScopeKind::Current)?;
                         }
                         AstParamKind::Out => {}
                     }
@@ -310,13 +328,13 @@ impl CallStack {
                             _ => return Err(SprocketError::RuntimeTypeError),
                         },
                     };
-                    let dest_val = self.lookup_symbol_val(&param.id)?.unwrap();
+                    let dest_val = self.lookup_symbol_val(&param.id, ScopeKind::Current)?.unwrap();
                     out_vals.insert(dest_id.clone(), dest_val);
                 }
-                let ret_val = self.lookup_symbol_val("__ret__")?.unwrap();
+                let ret_val = self.lookup_symbol_val("__ret__", ScopeKind::Current)?.unwrap();
                 self.pop();
                 for (id, val) in out_vals {
-                    self.set_symbol_val(&id, val)?;
+                    self.set_symbol_val(&id, val, ScopeKind::Any)?;
                 }
                 Ok(ret_val)
             }
@@ -336,7 +354,7 @@ impl CallStack {
                         _ => return Err(SprocketError::RuntimeTypeError),
                     },
                 };
-                self.set_symbol_val(&tag_decl.id, init_val)?;
+                self.set_symbol_val(&tag_decl.id, init_val, ScopeKind::Current)?;
                 Ok(())
             }
             AstPrgPart::FnDecl(fn_decl) => {
@@ -345,7 +363,7 @@ impl CallStack {
             }
             AstPrgPart::Statement(AstStatement::AssignStatement { target_id, expr }) => {
                 let val = self.val_from_expr(expr, true)?;
-                self.set_symbol_val(&target_id, val)?;
+                self.set_symbol_val(&target_id, val, ScopeKind::Any)?;
                 Ok(())
             }
             AstPrgPart::Statement(AstStatement::ExprStatement(expr)) => {
@@ -414,7 +432,7 @@ impl CallStack {
                 };
                 match self.current_ar().unwrap().symbols.get("__ret__") {
                     Some(_) => {
-                        self.set_symbol_val("__ret__", ret_val.unwrap())?;
+                        self.set_symbol_val("__ret__", ret_val.unwrap(), ScopeKind::Current)?;
                     }
                     None => {}
                 }

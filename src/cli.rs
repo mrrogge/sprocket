@@ -4,6 +4,7 @@ use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
 
+use crate::callstack::ScopeKind;
 use crate::interpretter::SprocketInterpretter;
 
 use crate::repl::SprocketRepl;
@@ -82,7 +83,7 @@ impl Cli {
             Ok(dest_buf) => dest_buf,
             Err(_) => return Err(SprocketError::MiscError),
         };
-        let main_task = match interp.call_stack.lookup_task("__main__")? {
+        let main_task = match interp.call_stack.lookup_task("__main__", ScopeKind::Global)? {
             Some(task) => task,
             None => return Err(SprocketError::MiscError),
         };

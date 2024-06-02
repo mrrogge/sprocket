@@ -9,6 +9,7 @@ use crate::ast::AstPrgPart;
 use crate::ast::AstTagDecl;
 use crate::callstack::CallStack;
 use crate::callstack::MemTableVal;
+use crate::callstack::ScopeKind;
 use crate::parser::SprocketParser;
 use crate::semantics::SemanticAnalyzer;
 use crate::sprocket::SprocketError;
@@ -33,7 +34,7 @@ impl SprocketInterpretter {
         sem_analyzer.analyze(&ast, &mut callstack)?;
         callstack.load_default_vals();
 
-        let main_task = match callstack.lookup_task("__main__")? {
+        let main_task = match callstack.lookup_task("__main__", ScopeKind::Global)? {
             Some(task) => task.clone(),
             None => return Err(SprocketError::RuntimeTypeError),
         };
@@ -141,9 +142,9 @@ impl SprocketInterpretter {
                     }
                 }
                 Ok(InterpCliMsg::Get(id)) => {
-                    let msg = match &self.call_stack.lookup_symbol_kind(&id) {
+                    let msg = match &self.call_stack.lookup_symbol_kind(&id, ScopeKind::Any) {
                         Some(SymbolKind::Var(_)) => {
-                            match self.call_stack.lookup_symbol_val(&id)? {
+                            match self.call_stack.lookup_symbol_val(&id, ScopeKind::Any)? {
                                 Some(MemTableVal::Bool(val)) => val.to_string(),
                                 Some(MemTableVal::Int32(val)) => val.to_string(),
                                 Some(MemTableVal::_RefTo(id)) => format!("RefTo({})", id),
@@ -163,11 +164,11 @@ impl SprocketInterpretter {
                 }
                 Ok(InterpCliMsg::Set(id)) => {
                     self.call_stack
-                        .set_symbol_val(&id, MemTableVal::Bool(true))?;
+                        .set_symbol_val(&id, MemTableVal::Bool(true), ScopeKind::Any)?;
                 }
                 Ok(InterpCliMsg::Clear(id)) => {
                     self.call_stack
-                        .set_symbol_val(&id, MemTableVal::Bool(false))?;
+                        .set_symbol_val(&id, MemTableVal::Bool(false), ScopeKind::Any)?;
                 }
             }
         }
@@ -176,7 +177,7 @@ impl SprocketInterpretter {
     }
 
     fn update(&mut self) -> SprocketResult<()> {
-        let main_task = match self.call_stack.lookup_task("__main__")? {
+        let main_task = match self.call_stack.lookup_task("__main__", ScopeKind::Global)? {
             Some(task) => task.clone(),
             None => return Err(SprocketError::RuntimeTypeError),
         };

@@ -31,15 +31,20 @@ impl SprocketParser {
         self.advance();
         loop {
             match &self.next_token {
+                Some(Token::Newline) => {
+                    self.eat(Token::Newline)?;
+                }
                 Some(_) => {
                     let part = self.process_prg_part()?;
-                    if let AstPrgPart::Comment(_) = part {
-                        if !self.strip_comments {
+                    match part {
+                        AstPrgPart::Comment(_) => {
+                            if !self.strip_comments {
+                                ast.push(part);
+                            }
+                        }
+                        _ => {
                             ast.push(part);
                         }
-                    }
-                    else {
-                        ast.push(part);
                     }
                 }
                 None => break,
@@ -751,6 +756,9 @@ impl SprocketParser {
                     self.eat(Token::RCurly)?;
                     return Ok(AstStatement::StmtBlock(block));
                 }
+                Some(Token::Newline) => {
+                    self.eat(Token::Newline)?;
+                }
                 Some(_) => {
                     block.push(self.process_prg_part()?);
                 }
@@ -954,14 +962,22 @@ mod tests {
     fn parses_block_following_block() {
         let mut parser = SprocketParser::new();
         let result = parser.parse("{}{}");
-        assert!(matches!(&result.as_ref().unwrap()[0], AstPrgPart::Statement(AstStatement::StmtBlock(_))));
-        assert!(matches!(&result.as_ref().unwrap()[1], AstPrgPart::Statement(AstStatement::StmtBlock(_))));
+        assert!(matches!(
+            &result.as_ref().unwrap()[0],
+            AstPrgPart::Statement(AstStatement::StmtBlock(_))
+        ));
+        assert!(matches!(
+            &result.as_ref().unwrap()[1],
+            AstPrgPart::Statement(AstStatement::StmtBlock(_))
+        ));
     }
 
     #[test]
     fn parses_inner_block() {
         let mut parser = SprocketParser::new();
         let result = parser.parse("{{}}");
-        assert!(matches!(&result.unwrap()[0], AstPrgPart::Statement(AstStatement::StmtBlock(block)) if matches!(block[0], AstPrgPart::Statement(AstStatement::StmtBlock(_)))))
+        assert!(
+            matches!(&result.unwrap()[0], AstPrgPart::Statement(AstStatement::StmtBlock(block)) if matches!(block[0], AstPrgPart::Statement(AstStatement::StmtBlock(_))))
+        )
     }
 }

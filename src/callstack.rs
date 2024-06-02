@@ -421,7 +421,12 @@ impl CallStack {
                 Ok(())
             }
             AstPrgPart::Statement(AstStatement::StmtBlock(block)) => {
-                todo!()
+                self.push(None);
+                for part in block {
+                    self.exe_prg_part(part)?;
+                }
+                self.pop();
+                Ok(())
             }
         }
     }

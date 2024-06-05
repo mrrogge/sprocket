@@ -102,6 +102,7 @@ pub enum TokenKeyword {
     Not,
     Use,
     Return,
+    If,
 }
 
 impl fmt::Display for TokenKeyword {
@@ -125,6 +126,7 @@ pub fn keyword_token_from_str(s: &str) -> Option<Token> {
         "not" => Some(Token::Keyword(TokenKeyword::Not)),
         "use" => Some(Token::Keyword(TokenKeyword::Use)),
         "return" => Some(Token::Keyword(TokenKeyword::Return)),
+        "if" => Some(Token::Keyword(TokenKeyword::If)),
         _ => None,
     }
 }

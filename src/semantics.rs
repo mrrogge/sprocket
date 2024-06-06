@@ -81,6 +81,9 @@ impl SemanticAnalyzer {
                     self.analyze(block, callstack)?;
                     callstack.pop();
                 }
+                AstPrgPart::Statement(AstStatement::IfStatement { cond, block, else_block }) => {
+                    todo!()
+                }
             }
         }
         Ok(())

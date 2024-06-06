@@ -446,6 +446,9 @@ impl CallStack {
                 self.pop();
                 Ok(())
             }
+            AstPrgPart::Statement(AstStatement::IfStatement { cond, block, else_block }) => {
+                todo!()
+            }
         }
     }
 

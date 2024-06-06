@@ -26,6 +26,7 @@ pub enum AstStatement {
     ExprStatement(AstExpr),
     ReturnStatement(Option<AstExpr>),
     StmtBlock(Vec<AstPrgPart>),
+    IfStatement {cond: AstExpr, block: Vec<AstPrgPart>, else_block: Option<Vec<AstPrgPart>>},
 }
 
 #[derive(Clone, Debug)]

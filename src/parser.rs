@@ -980,4 +980,46 @@ mod tests {
             matches!(&result.unwrap()[0], AstPrgPart::Statement(AstStatement::StmtBlock(block)) if matches!(block[0], AstPrgPart::Statement(AstStatement::StmtBlock(_))))
         )
     }
+
+    #[test]
+    fn parses_if_stmt() {
+        let mut parser = SprocketParser::new();
+        let result = parser.parse("if condition {}");
+        assert!(
+            matches!(&result.unwrap()[0], AstPrgPart::Statement(AstStatement::IfStatement { cond, block, else_block })
+            if matches!(cond, AstExpr::IdExpr(id) if id == "condition")
+            && block.len() == 0
+            && matches!(else_block, None)
+        ))
+    }
+
+    #[test]
+    fn parses_if_stmt_with_block() {
+        let mut parser = SprocketParser::new();
+        let result = parser.parse("if condition {test;}");
+        assert!(
+            matches!(&result.unwrap()[0], AstPrgPart::Statement(AstStatement::IfStatement { cond: _, block, else_block: _ })
+            if matches!(&block[0], AstPrgPart::Statement(AstStatement::ExprStatement(AstExpr::IdExpr(id))) if id == "test")
+        ))
+    }
+
+    #[test]
+    fn parses_if_stmt_with_else_block() {
+        let mut parser = SprocketParser::new();
+        let result = parser.parse("if condition {} else {test;}");
+        assert!(
+            matches!(&result.unwrap()[0], AstPrgPart::Statement(AstStatement::IfStatement { cond: _, block: _, else_block })
+            if matches!(&else_block.as_ref().unwrap()[0], AstPrgPart::Statement(AstStatement::ExprStatement(AstExpr::IdExpr(id))) if id == "test")
+        ))
+    }
+
+    #[test]
+    fn parses_else_if_stmts() {
+        let mut parser = SprocketParser::new();
+        let result = parser.parse("if condition {} else if condition2 {}");
+        assert!(
+            matches!(&result.unwrap()[0], AstPrgPart::Statement(AstStatement::IfStatement { cond: _, block: _, else_block })
+            if matches!(&else_block.as_ref().unwrap()[0], AstPrgPart::Statement(AstStatement::IfStatement { cond: _, block: _, else_block: _ }))
+        ))
+    }
 }

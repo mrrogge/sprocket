@@ -396,7 +396,8 @@ impl SprocketParser {
                     None => Err(SprocketError::UnexpectedEOF),
                 }
             }
-            Some(Token::LCurly) => self.process_stmt_block(),
+            Some(Token::LCurly) => Ok(AstStatement::StmtBlock(self.process_stmt_block()?)),
+            Some(Token::Keyword(TokenKeyword::If)) => self.process_if_stmt(),
             Some(_) => self.process_expr_stmt(),
             None => Err(SprocketError::UnexpectedEOF),
         }
@@ -747,14 +748,14 @@ impl SprocketParser {
         }
     }
 
-    fn process_stmt_block(&mut self) -> SprocketResult<AstStatement> {
+    fn process_stmt_block(&mut self) -> SprocketResult<Vec<AstPrgPart>> {
         self.eat(Token::LCurly)?;
         let mut block: Vec<AstPrgPart> = vec![];
         loop {
             match &self.next_token {
                 Some(Token::RCurly) => {
                     self.eat(Token::RCurly)?;
-                    return Ok(AstStatement::StmtBlock(block));
+                    return Ok(block);
                 }
                 Some(Token::Newline) => {
                     self.eat(Token::Newline)?;
@@ -765,6 +766,28 @@ impl SprocketParser {
                 None => return Err(SprocketError::UnexpectedEOF),
             }
         }
+    }
+
+    fn process_if_stmt(&mut self) -> SprocketResult<AstStatement> {
+        self.eat(Token::Keyword(TokenKeyword::If))?;
+        let cond = self.process_expr()?;
+        let block = self.process_stmt_block()?;
+        let else_block = match &self.next_token {
+            Some(Token::Keyword(TokenKeyword::Else)) => {
+                self.eat(Token::Keyword(TokenKeyword::Else))?;
+                match &self.next_token {
+                    Some(Token::Keyword(TokenKeyword::If)) => {
+                        let else_if_stmt = self.process_if_stmt()?;
+                        Some(vec![AstPrgPart::Statement(else_if_stmt)])
+                    }
+                    _ => Some(self.process_stmt_block()?)
+                }
+            }
+            _ => {
+                None
+            }
+        };
+        Ok(AstStatement::IfStatement { cond, block, else_block })
     }
 }
 

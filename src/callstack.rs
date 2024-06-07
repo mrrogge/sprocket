@@ -447,7 +447,27 @@ impl CallStack {
                 Ok(())
             }
             AstPrgPart::Statement(AstStatement::IfStatement { cond, block, else_block }) => {
-                todo!()
+                let cond_val = self.bool_val_from_expr(cond, true)?;
+                if cond_val {
+                    self.push(None);
+                    for part in block {
+                        self.exe_prg_part(part)?;
+                    }
+                    self.pop();
+                }
+                else {
+                    match else_block {
+                        Some(block) => {
+                            self.push(None);
+                            for part in block {
+                                self.exe_prg_part(part)?;
+                            }
+                            self.pop();
+                        }
+                        None => {}
+                    }
+                }
+                Ok(())
             }
         }
     }

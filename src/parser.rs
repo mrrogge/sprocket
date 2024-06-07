@@ -772,6 +772,14 @@ impl SprocketParser {
         self.eat(Token::Keyword(TokenKeyword::If))?;
         let cond = self.process_expr()?;
         let block = self.process_stmt_block()?;
+        loop {
+            if let Some(Token::Newline) = &self.next_token {
+                self.eat(Token::Newline)?;
+            }
+            else {
+                break;
+            }
+        }
         let else_block = match &self.next_token {
             Some(Token::Keyword(TokenKeyword::Else)) => {
                 self.eat(Token::Keyword(TokenKeyword::Else))?;

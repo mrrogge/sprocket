@@ -82,7 +82,20 @@ impl SemanticAnalyzer {
                     callstack.pop();
                 }
                 AstPrgPart::Statement(AstStatement::IfStatement { cond, block, else_block }) => {
-                    todo!()
+                    let cond_type = Self::eval_expr_type(&cond, &callstack)?;
+                    match cond_type {
+                        SpkType::Bool => {}
+                        _ => return Err(SprocketError::ExpectedExprTypeOf(SpkType::Bool, cond_type.clone()))
+                    }
+                    callstack.push(None);
+                    self.analyze(block, callstack)?;
+                    callstack.pop();
+                    match else_block {
+                        Some(block) => {
+                            self.analyze(block, callstack)?;
+                        }
+                        None => {}
+                    }
                 }
             }
         }

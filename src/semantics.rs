@@ -270,4 +270,24 @@ mod tests {
         cs.push(None);
         assert!(matches!(analyzer.analyze(&ast, &mut cs), Ok(())))
     }
+
+    #[test]
+    fn allows_bools_in_if_cond() {
+        let mut parser = SprocketParser::new();
+        let ast = parser.parse("if true {}").unwrap();
+        let analyzer = SemanticAnalyzer::new();
+        let mut cs = CallStack::new();
+        cs.push(None);
+        assert!(matches!(analyzer.analyze(&ast, &mut cs), Ok(())))
+    }
+
+    #[test]
+    fn prevents_non_bools_in_if_cond() {
+        let mut parser = SprocketParser::new();
+        let ast = parser.parse("if 0 {}").unwrap();
+        let analyzer = SemanticAnalyzer::new();
+        let mut cs = CallStack::new();
+        cs.push(None);
+        assert!(matches!(analyzer.analyze(&ast, &mut cs), Err(_)))
+    }
 }

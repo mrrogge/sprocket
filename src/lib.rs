@@ -9,3 +9,4 @@ pub mod semantics;
 pub mod sprocket;
 pub mod symbol;
 pub mod token;
+pub mod wasm;

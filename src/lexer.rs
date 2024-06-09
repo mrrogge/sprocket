@@ -163,11 +163,12 @@ impl Lexer {
         let mut peek_pos: usize = 0;
         match self.peek_char(peek_pos) {
             Some(c) => {
-                if c == '\'' {
+                if c == '\'' || c == '"' {
+                    let quote_char = c;
                     peek_pos += 1;
                     loop {
                         if let Some(c) = self.peek_char(peek_pos) {
-                            if c == '\'' {
+                            if c == quote_char {
                                 self.advance(val_string.len() + 2);
                                 return Some(Token::StringLiteral(val_string));
                             } else {

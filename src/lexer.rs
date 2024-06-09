@@ -589,9 +589,16 @@ mod tests {
     }
 
     #[test]
-    fn lexes_string_values() {
+    fn lexes_string_values_with_single_quotes() {
         let mut lexer = Lexer::new();
         lexer.init("'string value'");
+        assert!(matches!(lexer.next(), Some(Token::StringLiteral(s)) if s == "string value"));
+    }
+
+    #[test]
+    fn lexes_string_values_with_double_quotes() {
+        let mut lexer = Lexer::new();
+        lexer.init("\"string value\"");
         assert!(matches!(lexer.next(), Some(Token::StringLiteral(s)) if s == "string value"));
     }
 

@@ -219,6 +219,7 @@ impl SemanticAnalyzer {
                 // TODO: verify args match param types
                 Ok(fn_def.ret_type.clone())
             }
+            AstExpr::StringLiteralExpr(_) => Ok(SpkType::String),
         }
     }
 
@@ -243,7 +244,7 @@ impl SemanticAnalyzer {
             SpkType::Ref(type_) => Ok(SpkType::Ref(Box::new(Self::eval_typeref(
                 type_, callstack,
             )?))),
-            SpkType::Bool | SpkType::Int32 | SpkType::Void => Ok(typeref.clone()),
+            SpkType::Bool | SpkType::Int32 | SpkType::String | SpkType::Void => Ok(typeref.clone()),
         }
     }
 }

@@ -201,6 +201,7 @@ impl CallStack {
         match expr {
             AstExpr::BoolLiteralExpr(val) => Ok(MemTableVal::Bool(*val)),
             AstExpr::IntLiteralExpr(val) => Ok(MemTableVal::Int32(*val)),
+            AstExpr::StringLiteralExpr(val) => Ok(MemTableVal::String(val.to_string())),
             AstExpr::IdExpr(id) => match self.lookup_symbol_val(id, ScopeKind::Any)? {
                 Some(val) => Ok(val),
                 None => Err(SprocketError::SymbolNotDefined(id.to_string())),
@@ -522,6 +523,7 @@ pub enum MemTableVal {
     Bool(bool),
     Int32(i32),
     _RefTo(String),
+    String(String),
 }
 
 impl fmt::Display for MemTableVal {
@@ -530,6 +532,7 @@ impl fmt::Display for MemTableVal {
             MemTableVal::Bool(val) => write!(f, "{}", val),
             MemTableVal::Int32(val) => write!(f, "{}", val),
             MemTableVal::_RefTo(val) => write!(f, "&{}", val),
+            MemTableVal::String(val) => write!(f, "\"{}\"", val),
         }
     }
 }

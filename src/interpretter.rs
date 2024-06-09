@@ -147,6 +147,7 @@ impl SprocketInterpretter {
                             match self.call_stack.lookup_symbol_val(&id, ScopeKind::Any)? {
                                 Some(MemTableVal::Bool(val)) => val.to_string(),
                                 Some(MemTableVal::Int32(val)) => val.to_string(),
+                                Some(MemTableVal::String(val)) => val,
                                 Some(MemTableVal::_RefTo(id)) => format!("RefTo({})", id),
                                 None => return Err(SprocketError::SymbolMissingVal(id.clone())),
                             }

@@ -94,6 +94,18 @@ impl SprocketParser {
         }
     }
 
+    fn _eat_string_lit(&mut self) -> SprocketResult<String> {
+        match &self.next_token {
+            Some(Token::StringLiteral(val)) => {
+                let the_val = val.clone();
+                self.advance();
+                Ok(the_val)
+            }
+            Some(token) => Err(SprocketError::UnexpectedToken(token.clone(), None)),
+            None => Err(SprocketError::UnexpectedEOF),
+        }
+    }
+
     fn process_prg_part(&mut self) -> SprocketResult<AstPrgPart> {
         loop {
             match &self.next_token {
@@ -486,6 +498,7 @@ impl SprocketParser {
                     Token::Keyword(TokenKeyword::True) => AstExpr::BoolLiteralExpr(true),
                     Token::Keyword(TokenKeyword::False) => AstExpr::BoolLiteralExpr(false),
                     Token::IntegerLiteral(val) => AstExpr::IntLiteralExpr(*val),
+                    Token::StringLiteral(val) => AstExpr::StringLiteralExpr(val.to_string()),
                     _ => return Err(SprocketError::UnexpectedToken(token.clone(), None)),
                 };
                 self.advance();
@@ -1052,5 +1065,14 @@ mod tests {
             matches!(&result.unwrap()[0], AstPrgPart::Statement(AstStatement::IfStatement { cond: _, block: _, else_block })
             if matches!(&else_block.as_ref().unwrap()[0], AstPrgPart::Statement(AstStatement::IfStatement { cond: _, block: _, else_block: _ }))
         ))
+    }
+
+    #[test]
+    fn parses_string_lit() {
+        let mut parser = SprocketParser::new();
+        let result = parser.parse("'string literal';");
+        assert!(
+            matches!(&result.unwrap()[0], AstPrgPart::Statement(AstStatement::ExprStatement(AstExpr::StringLiteralExpr(val))) if val == "string literal")
+        )
     }
 }

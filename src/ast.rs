@@ -40,6 +40,7 @@ pub enum AstExpr {
     UnopExpr(AstUnop, Box<AstExpr>),
     BoolLiteralExpr(bool),
     IntLiteralExpr(i32),
+    StringLiteralExpr(String),
     CallExpr {
         id: String,
         pos_args: Vec<AstExpr>,
@@ -128,6 +129,7 @@ pub enum AstParamKind {
 pub enum SpkType {
     Bool,
     Int32,
+    String,
     Ref(Box<SpkType>),
     Unresolved(String),
     Void,
@@ -138,6 +140,7 @@ impl fmt::Display for SpkType {
         match self {
             SpkType::Bool => write!(f, "Bool"),
             SpkType::Int32 => write!(f, "i32"),
+            SpkType::String => write!(f, "String"),
             SpkType::Ref(type_) => write!(f, "&{}", type_),
             SpkType::Unresolved(id) => write!(f, "unresolved({})", id),
             SpkType::Void => write!(f, "void"),

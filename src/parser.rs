@@ -753,6 +753,7 @@ impl SprocketParser {
                 Ok(match id.as_str() {
                     "bool" => SpkType::Bool,
                     "i32" => SpkType::Int32,
+                    "string" => SpkType::String,
                     id => SpkType::Unresolved(id.to_string()),
                 })
             }

@@ -117,6 +117,7 @@ impl CallStack {
                 Some(SymbolKind::Var(type_)) => match (type_, val) {
                     (SpkType::Bool, val @ MemTableVal::Bool(_))
                     | (SpkType::Int32, val @ MemTableVal::Int32(_))
+                    | (SpkType::String, val @ MemTableVal::String(_))
                     | (SpkType::Ref(_), val @ MemTableVal::_RefTo(_)) => {
                         return Ok(ar.mem.insert(symbol.to_string(), val))
                     }
@@ -352,6 +353,7 @@ impl CallStack {
                     None => match &tag_decl.type_ {
                         SpkType::Bool => MemTableVal::Bool(false),
                         SpkType::Int32 => MemTableVal::Int32(0),
+                        SpkType::String => MemTableVal::String("".to_string()),
                         _ => return Err(SprocketError::RuntimeTypeError),
                     },
                 };
@@ -476,6 +478,7 @@ impl CallStack {
     pub fn load_globals(&mut self) -> SprocketResult<()> {
         self.insert_symbol("bool", SymbolKind::Type(SpkType::Bool))?;
         self.insert_symbol("i32", SymbolKind::Type(SpkType::Int32))?;
+        self.insert_symbol("string", SymbolKind::Type(SpkType::String))?;
         Ok(())
     }
 
@@ -491,6 +494,11 @@ impl CallStack {
                     (symbol, SymbolKind::Var(SpkType::Int32)) => {
                         if let None = ar.mem.get(symbol) {
                             ar.mem.insert(symbol.clone(), MemTableVal::Int32(0));
+                        }
+                    }
+                    (symbol, SymbolKind::Var(SpkType::String)) => {
+                        if let None = ar.mem.get(symbol) {
+                            ar.mem.insert(symbol.clone(), MemTableVal::String("".to_string()));
                         }
                     }
                     (_, _) => {}

@@ -97,6 +97,9 @@ impl SemanticAnalyzer {
                         None => {}
                     }
                 }
+                AstPrgPart::Task(_) => {
+                    todo!()
+                }
             }
         }
         Ok(())

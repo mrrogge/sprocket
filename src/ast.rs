@@ -9,6 +9,7 @@ pub enum AstPrgPart {
     FnDecl(AstFnDecl),
     Statement(AstStatement),
     Comment(String),
+    Task(AstTask),
 }
 
 #[derive(Clone, Debug)]
@@ -46,6 +47,12 @@ pub enum AstExpr {
         pos_args: Vec<AstExpr>,
         named_args: HashMap<String, AstExpr>,
     },
+}
+
+#[derive(Clone, Debug)]
+pub struct AstTask {
+    id: Option<String>,
+    block: Vec<AstPrgPart>,
 }
 
 #[derive(Clone, Debug)]

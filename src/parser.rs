@@ -1076,4 +1076,11 @@ mod tests {
             matches!(&result.unwrap()[0], AstPrgPart::Statement(AstStatement::ExprStatement(AstExpr::StringLiteralExpr(val))) if val == "string literal")
         )
     }
+
+    #[test]
+    fn parses_task_without_name() {
+        let mut parser = SprocketParser::new();
+        let result = parser.parse("task {}");
+        assert!(matches!(&result.unwrap()[0], AstPrgPart::Task(_)))
+    }
 }

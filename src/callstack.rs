@@ -472,6 +472,9 @@ impl CallStack {
                 }
                 Ok(())
             }
+            AstPrgPart::Task(_) => {
+                todo!()
+            }
         }
     }
 

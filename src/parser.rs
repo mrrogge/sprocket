@@ -1099,4 +1099,14 @@ mod tests {
         let result = parser.parse("task {}");
         assert!(matches!(&result.unwrap()[0], AstPrgPart::Task(_)))
     }
+
+    #[test]
+    fn parses_task_with_name() {
+        let mut parser = SprocketParser::new();
+        let result = parser.parse("task test {}");
+        assert!(matches!(&result.unwrap()[0], AstPrgPart::Task(task)
+            if matches!(&task.id, Some(id)
+            if id == "test")
+        ))
+    }
 }

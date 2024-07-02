@@ -1,8 +1,7 @@
 use std::collections::HashMap;
 
 use crate::ast::{
-    AstBinop, AstExpr, AstFnDecl, AstParamDecl, AstParamKind, AstPrgPart, AstStatement, AstTagDecl,
-    AstUnop, SpkType, TableCell, AST,
+    AstBinop, AstExpr, AstFnDecl, AstParamDecl, AstParamKind, AstPrgPart, AstStatement, AstTagDecl, AstTask, AstUnop, SpkType, TableCell, AST
 };
 use crate::lexer::Lexer;
 use crate::sprocket::{SprocketError, SprocketResult};
@@ -125,6 +124,10 @@ impl SprocketParser {
                     let fn_decl = self.process_fn_decl()?;
                     return Ok(AstPrgPart::FnDecl(fn_decl));
                 }
+                Some(Token::Keyword(TokenKeyword::Task)) => {
+                    let task = self.process_task()?;
+                    return Ok(AstPrgPart::Task(task));
+                }
                 Some(_) => {
                     let statement = self.process_statement()?;
                     return Ok(AstPrgPart::Statement(statement));
@@ -132,6 +135,19 @@ impl SprocketParser {
                 None => return Err(SprocketError::UnexpectedEOF),
             }
         }
+    }
+
+    fn process_task(&mut self) -> SprocketResult<AstTask> {
+        self.eat(Token::Keyword(TokenKeyword::Task))?;
+        let id = match &self.next_token {
+            Some(Token::Id(_)) => Some(self._eat_id()?),
+            _ => None
+        };
+        let block = self.process_stmt_block()?;
+        Ok(AstTask {
+            id,
+            block
+        })
     }
 
     // (GLOBAL)? TAG id:id (:= expr)?;

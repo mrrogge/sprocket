@@ -472,8 +472,13 @@ impl CallStack {
                 }
                 Ok(())
             }
-            AstPrgPart::Task(_) => {
-                todo!()
+            AstPrgPart::Task(task) => {
+                self.push(None);
+                for part in &task.block {
+                    self.exe_prg_part(&part)?;
+                }
+                self.pop();
+                Ok(())
             }
         }
     }

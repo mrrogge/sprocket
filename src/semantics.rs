@@ -97,8 +97,10 @@ impl SemanticAnalyzer {
                         None => {}
                     }
                 }
-                AstPrgPart::Task(_) => {
-                    todo!()
+                AstPrgPart::Task(task) => {
+                    callstack.push(None);
+                    self.analyze(&task.block, callstack)?;
+                    callstack.pop();
                 }
             }
         }

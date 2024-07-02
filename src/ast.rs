@@ -51,8 +51,8 @@ pub enum AstExpr {
 
 #[derive(Clone, Debug)]
 pub struct AstTask {
-    id: Option<String>,
-    block: Vec<AstPrgPart>,
+    pub id: Option<String>,
+    pub block: Vec<AstPrgPart>,
 }
 
 #[derive(Clone, Debug)]
